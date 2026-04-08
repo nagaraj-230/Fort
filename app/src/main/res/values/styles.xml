@@ -1,0 +1,190 @@
+<resources>
+
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <!-- Customize your theme here. -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+    </style>
+
+    <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:windowDisablePreview">true</item>
+    </style>
+
+    <style name="AppTheme.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
+
+    <style name="AppTheme.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
+
+    <style name="FullscreenTheme" parent="AppTheme">
+        <item name="android:windowActionBarOverlay">true</item>
+        <item name="android:windowBackground">@null</item>
+    </style>
+
+    <!--<style name="FullscreenActionBarStyle" parent="Widget.AppCompat.ActionBar">
+        <item name="android:background">@color/black_overlay</item>
+    </style>-->
+
+    <style name="TextStyle" parent="android:Widget.TextView">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/label_color</item>
+        <item name="android:gravity">start</item>
+        <item name="android:maxLines">10</item>
+        <item name="android:ellipsize">none</item>
+    </style>
+
+    <style name="BigText" parent="TextStyle">
+        <item name="android:textSize">18sp</item>
+    </style>
+
+    <style name="BigTextBold" parent="BigText">
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="MediumText" parent="TextStyle">
+        <item name="android:textSize">16sp</item>
+    </style>
+
+    <style name="MediumTextBold" parent="MediumText">
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="SmallText" parent="TextStyle">
+        <item name="android:textSize">12sp</item>
+    </style>
+
+    <style name="SmallTextBold" parent="TextStyle">
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="EditText" parent="Base.Widget.AppCompat.EditText">
+        <item name="android:gravity">start</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:textSize">@dimen/medium_text_size</item>
+    </style>
+
+    <style name="DarkEditText" parent="EditText">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/dark_gray</item>
+        <item name="android:textColorHint">@color/dark_gray</item>
+    </style>
+
+    <style name="EditTextSelector" parent="EditText">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@drawable/edit_text_selector</item>
+        <item name="android:textColorHint">@color/dark_gray</item>
+    </style>
+
+    <style name="LightEditText" parent="EditText">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:textColorHint">@color/white</item>
+        <item name="backgroundTint">@color/white</item>
+    </style>
+
+    <style name="LightEditTextTheme">
+        <item name="android:textColor">@color/white</item>
+        <item name="android:textColorHint">@color/white</item>
+        <item name="colorControlActivated">@color/white</item>
+        <item name="colorControlHighlight">@color/white</item>
+    </style>
+
+    <style name="EditTextAppearance" parent="TextAppearance.AppCompat">
+        <item name="android:textColor">@color/label_color</item>
+        <item name="android:textColorHint">@color/label_color</item>
+        <item name="android:textSize">@dimen/medium_text_size</item>
+    </style>
+
+    <style name="Button" parent="Base.Widget.AppCompat.Button">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:background">@drawable/button_selector</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:textSize">@dimen/large_text_size</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:paddingBottom">10dp</item>
+        <item name="android:paddingTop">10dp</item>
+        <item name="paddingStart">60dp</item>
+        <item name="paddingEnd">60dp</item>
+    </style>
+
+    <style name="CancelButton" parent="Button">
+        <item name="android:background">@drawable/cancel_button_selector</item>
+        <item name="android:textColor">@color/label_dark_grey_color</item>
+    </style>
+
+    <style name="OtpButton" parent="Button">
+        <item name="android:background">@drawable/cancel_button_selector</item>
+        <item name="android:textColor">@color/label_dark_grey_color</item>
+    </style>
+
+    <style name="RejectButton" parent="Button">
+        <item name="android:background">@drawable/reject_button_selector</item>
+        <item name="android:textColor">@color/red</item>
+        <item name="android:textSize">@dimen/small_text_size</item>
+    </style>
+
+    <style name="AcceptButton" parent="Button">
+        <item name="android:background">@drawable/accept_button_selector</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:textSize">@dimen/small_text_size</item>
+    </style>
+
+    <style name="PinButton" parent="Widget.AppCompat.Button">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:background">@null</item>
+        <item name="android:textSize">@dimen/x_large_text_size</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:layout_gravity">center|fill</item>
+        <item name="android:padding">15dp</item>
+        <item name="android:layout_columnWeight">1</item>
+    </style>
+
+    <style name="LockDetailButton" parent="Base.Widget.AppCompat.Button">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:background">@null</item>
+        <item name="android:textSize">@dimen/medium_text_size</item>
+        <item name="android:textColor">@color/gray</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:layout_weight">1</item>
+    </style>
+
+    <style name="AppTheme.NoActionBar.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
+
+    <style name="AppTheme.NoActionBar.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
+
+    <style name="Divider">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">0.8dp</item>
+        <item name="android:background">@color/gray</item>
+        <item name="android:layout_marginLeft">5dp</item>
+        <item name="android:layout_marginRight">5dp</item>
+    </style>
+
+    <style name="DividerWhite">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">0.8dp</item>
+        <item name="android:background">@color/white</item>
+        <item name="android:layout_marginLeft">5dp</item>
+        <item name="android:layout_marginRight">5dp</item>
+    </style>
+
+    <style name="SwitchTextAppearence">
+        <item name="android:textSize">10sp</item>
+        <item name="android:textColor">@color/black</item>
+    </style>
+
+
+
+</resources>

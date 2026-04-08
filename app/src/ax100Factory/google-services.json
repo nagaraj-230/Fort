@@ -1,0 +1,68 @@
+{
+  "project_info": {
+    "project_number": "651696839245",
+    "project_id": "fortnova-f68f3",
+    "storage_bucket": "fortnova-f68f3.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:651696839245:android:ddd056534955becd3fda04",
+        "android_client_info": {
+          "package_name": "com.tbi.fort.nova"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "651696839245-17iimbmkopbv2s4lajd9rr7144uh6lar.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDuXOE8j1lehiEaS7fLWVLjPxoGHjsQ9po"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "651696839245-17iimbmkopbv2s4lajd9rr7144uh6lar.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:651696839245:android:ce53392f53c73a8e3fda04",
+        "android_client_info": {
+          "package_name": "com.tbi.fort.nova.dev"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "651696839245-17iimbmkopbv2s4lajd9rr7144uh6lar.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDuXOE8j1lehiEaS7fLWVLjPxoGHjsQ9po"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "651696839245-17iimbmkopbv2s4lajd9rr7144uh6lar.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

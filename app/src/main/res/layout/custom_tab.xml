@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tool="http://schemas.android.com/tools"
+    android:layout_width="wrap_content"
+    tool:background="@color/colorAccent"
+    android:layout_height="wrap_content">
+
+    <Button
+        android:id="@+id/tab_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:background="@null"
+        android:textAllCaps="false"
+        android:textSize="15sp"
+        android:textColor="@drawable/tab_text_selector"
+        tool:drawableTop="@mipmap/ic_user_white"
+        tool:text="@string/dashboard"/>
+
+    <Button
+        android:id="@+id/tab_notification_count"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"
+        android:layout_marginTop="10dp"
+        android:layout_marginLeft="47dp"
+        android:layout_marginStart="47dp"
+        android:background="@drawable/circle"
+        android:contentDescription="@string/app_name"
+        android:gravity="center"
+        android:textSize="11sp"
+        tool:text="99" />
+
+</RelativeLayout>

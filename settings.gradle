@@ -1,0 +1,4 @@
+include ':app'
+include ':countryDialCode'
+include ':rootchecker'
+rootProject.name = "SmartLockAndroid"

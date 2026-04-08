@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="5dp"
+        android:layout_marginRight="5dp"
+        android:layout_marginTop="5dp"
+        android:padding="5dp">
+
+        <TextView
+            android:id="@+id/lblRequestName"
+            style="@style/MediumText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:text="Sample User Name"
+            android:visibility="invisible"
+            android:textColor="@color/dark_gray" />
+
+        <TextView
+            android:id="@+id/lblRequestStatus"
+            style="@style/SmallText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:text="@string/text_accepted"
+            android:layout_centerVertical="true"
+            android:visibility="invisible"
+            android:textColor="@color/green" />
+
+    </RelativeLayout>
+
+    <TextView
+        android:id="@+id/lblRequestContent"
+        style="@style/SmallText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_marginLeft="5dp"
+        android:layout_marginRight="5dp"
+        android:padding="5dp"
+        android:text="@string/text_content"
+        android:textColor="@color/label_light_grey_color" />
+
+
+    <LinearLayout
+        android:id="@+id/linAcceptReject"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:layout_marginLeft="5dp">
+
+        <Button
+            android:id="@+id/btnReject"
+            style="@style/RejectButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="10dp"
+            android:paddingLeft="20dp"
+            android:paddingRight="20dp"
+            android:text="@string/button_reject" />
+
+        <Button
+            android:id="@+id/btnAccept"
+            style="@style/AcceptButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="10dp"
+            android:paddingLeft="20dp"
+            android:paddingRight="20dp"
+            android:text="@string/button_accept" />
+
+    </LinearLayout>
+
+
+</LinearLayout>

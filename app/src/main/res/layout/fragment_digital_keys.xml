@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:card_view="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:focusable="true"
+    android:focusableInTouchMode="true"
+    android:windowSoftInputMode="stateAlwaysHidden"
+    android:orientation="vertical">
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/digi_pin_recycler_view"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="@dimen/_5sdp"
+        android:paddingTop="@dimen/_5sdp"
+        android:layout_marginBottom="@dimen/_40sdp"
+        android:orientation="horizontal" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/_40sdp"
+        android:layout_alignParentBottom="true"
+        android:background="@color/cancle_button_hover_color"
+        android:gravity="center"
+        android:padding="@dimen/_2sdp">
+
+        <Button
+            android:id="@+id/update_pin_button"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_centerHorizontal="true"
+            android:background="@drawable/update_button_selector"
+            android:text="Update"
+            android:textColor="@color/white" />
+    </LinearLayout>
+
+</RelativeLayout>

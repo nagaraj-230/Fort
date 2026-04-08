@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="enter_wifi_ssid">Please enter wifi ssid</string>
+    <string name="enter_wifi_password">Please enter wifi password</string>
+</resources>

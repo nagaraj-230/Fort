@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:showIn="navigation_view">
+
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/nav_profile"
+            android:checked="false"
+            android:title="@string/my_profile" />
+        <item
+            android:id="@+id/nav_reset_pin"
+            android:checked="false"
+            android:title="@string/reset_pin" />
+        <item
+            android:id="@+id/nav_transfer_owner"
+            android:checked="false"
+            android:title="@string/transfer_owner" />
+        <item
+            android:id="@+id/nav_factory_reset"
+            android:checked="false"
+            android:visible="false"
+            android:title="@string/factory_reset" />
+        <item
+            android:id="@+id/nav_force_sync"
+            android:checked="false"
+            android:title="@string/manual_sync" />
+        <item
+            android:id="@+id/nav_delete_account"
+            android:checked="false"
+            android:title="@string/delete_account" />
+
+        <item
+            android:id="@+id/nav_logout"
+            android:checked="false"
+            android:visible="false"
+            android:title="@string/logout" />
+
+    </group>
+
+</menu>

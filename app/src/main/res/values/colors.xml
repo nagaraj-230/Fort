@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#0277bd</color>
+    <color name="colorPrimaryDark">#1a237e</color>
+    <color name="colorAccent">#fac51c</color>
+    <color name="amber">#fac51c</color>
+
+    <color name="transparent">#00000000</color>
+    <color name="white">#FFFFFF</color>
+    <color name="gray">#616161</color>
+    <color name="black">#000000</color>
+    <color name="dark_gray">#212121</color>
+    <color name="black_overlay">#66000000</color>
+    <color name="light_grey">#E3E3E3</color>
+    <color name="green">#61bd6d</color>
+    <color name="dark_green">#3c9047</color>
+    <color name="red">#eb6b56</color>
+
+    <!-- Label & Button Color-->
+    <color name="label_color">#FFFFFF</color>
+    <color name="button_hover_color">#d98310</color>
+    <color name="button_color">#fac51c</color>
+    <color name="label_dark_grey_color">#212121</color>
+    <color name="label_light_grey_color">#9A9A9A</color>
+    <color name="cancle_button_hover_color">#E0E0E0</color>
+
+</resources>

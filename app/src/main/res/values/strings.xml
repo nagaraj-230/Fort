@@ -1,0 +1,228 @@
+<resources>
+    <string name="app_name">Fort</string>
+    <string name="no_internet">No Internet. Please check your network connection.</string>
+    <!--Menu-->
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+    <string name="dashboard">Dashboard</string>
+    <string name="my_profile">My Profile</string>
+    <string name="reset_pin">Reset PIN</string>
+
+    <string name="locks">Locks</string>
+    <string name="notification">Notification</string>
+    <string name="users">Users</string>
+    <string name="welcome">Welcome!</string>
+    <string name="ok">OK</string>
+    <string name="oops_error">Oops! Something went wrong. Please try again later</string>
+
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+
+
+    <!--Login-->
+    <string name="login_email_hint">Email</string>
+    <string name="login_password_hint">Password</string>
+    <string name="login_button_text">Sign In</string>
+    <string name="login_forgot_password">Forgot Password?</string>
+    <string name="login_no_account">Don\'t have an account?</string>
+    <string name="sync_success">Data synced successfully.</string>
+
+    <!--User-->
+    <string name="signup_email_hint">Email</string>
+    <string name="signup_password_hint">Password</string>
+    <string name="signup_name_hint">Name</string>
+    <string name="signup_con_password_hint">Confirm Password</string>
+    <string name="signup_mobile_hint">Mobile</string>
+    <string name="signup_address_hint">Address</string>
+    <string name="password_help">Password should have min 8 chars, max 16 chars, with minimum 1 uppercase letter, 1 lower case letter, 1 number and 1 special character</string>
+    <string name="sign_up">Sign Up</string>
+    <!--ForgotPassword-->
+    <string name="fp_title">Forgot Password</string>
+    <string name="forgotpassword_email_hint">Enter your email address</string>
+    <string name="forgot_password">Forgot your password?</string>
+    <string name="forgotpassword_hint">Enter your email address and we\'ll send you a link to reset your password.</string>
+    <string name="forgot_password_sendlink">SEND LINK</string>
+
+    <!--SuccessfullyRegistered-->
+    <string name="successfully_registered">Successfully registered</string>
+    <string name="forgotpassword_success_message">An email with an reset password link has been sent to the email address, %s. Please reset your password to proceed.</string>
+    <string name="go_to_signin_button">Sign In</string>
+    <string name="successfully_registered_message">An email with an activation link has been sent to the registered email address, %s. Please activate the account to proceed.</string>
+
+    <!--PasswordReset-->
+    <string name="password_reset">Password reset email sent</string>
+
+    <!--Pin-->
+    <string name="security_pin">Security PIN</string>
+    <string name="create_pin">Create and set your security PIN</string>
+    <string name="create_new_pin">Create and set your new PIN</string>
+    <string name="confirm_pin">Confirm security PIN</string>
+    <string name="confirm_new_pin">Confirm new PIN</string>
+    <string name="enter_pin">Enter your security PIN</string>
+    <string name="error_pin">New PIN and confirm PIN doesn\'t match.</string>
+    <string name="validate_pin">Incorrect PIN.</string>
+    <string name="success_pin_msg">Security Pin set successfully</string>
+    <string name="update_pin_msg">Security Pin updated successfully</string>
+    <string name="btn_continue">Continue</string>
+    <string name="valid_email">abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.@-</string>
+    <string name="valid_password">abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%*()-.,&amp;</string>
+    <string name="timeout_pin">Enter the Security PIN</string>
+
+    <!--Profile-->
+    <string name="profile">My Profile</string>
+    <string name="edit_profile">Edit Profile</string>
+    <string name="schedule">Schedule</string>
+
+
+    <!--LockDetail-->
+    <string name="lock_details">Lock Details</string>
+    <string name="iv_users">Users</string>
+    <string name="iv_history">History</string>
+    <string name="iv_transfer">Transfer Owner</string>
+    <string name="tap_to_engage">Please switch ON the Lock and Tap here to Lock/Unlock</string>
+    <string name="lock_detail_error">Failed to get Lock Details. Please connect to internet and sync with server.</string>
+    <string name="battery_percentage">100%</string>
+    <string name="factory_reset">Factory Reset</string>
+    <string name="manual_sync">Sync Data</string>
+    <string name="manual_sync_completed">Data synced successfully.</string>
+    <string name="logout">Logout</string>
+    <string name="delete_account">Delete Account</string>
+    <string name="reset_confirm_message">Are you sure to reset the hardware? (Access to the lock will be removed for all the users and the lock needs to be added newly) Please confirm.</string>
+    <string name="ble_not_found">BLE device not found. Would you like to navigate Wifi Settings Screen?</string>
+    <!--AddLock-->
+    <string name="wifi">Wifi</string>
+    <string name="bluetooth">Bluetooth</string>
+    <string name="new_lock">New Lock</string>
+    <string name="lock_name">Lock Name</string>
+    <string name="lock_code">Lock Code</string>
+    <string name="no_lock">You do not have any lock associated. Please add lock to proceed.</string>
+    <string name="no_lock_owner">You do not have any lock associated.</string>
+    <string name="please_select_lock">Please scan and select a lock.</string>
+    <string name="please_select_wifi">Please scan and select a wifi name.</string>
+    <string name="turn_on_wifi_connect_lock">Please turn ON wifi and connect the Lock.</string>
+    <string name="no_wifi_lock">No Wifi Lock found.</string>
+    <string name="connect_wifi_lock">Please connect the lock via Wifi.</string>
+    <string name="connect_same_wifi_lock">Please connect the same lock via Wifi.</string>
+    <string name="engage_to_proceed">You may now operate the lock</string>
+    <string name="lock_failure">Unable to connect Lock. Please try again.</string>
+    <string name="lock_add_security">For security, the system prohibits any app from jumping to the Wi-Fi setting page. Please connect manually</string>
+
+    <!--Assign Users-->
+    <string name="assign_users">Assign Users</string>
+    <string name="master_user_header">MASTER USER(S)</string>
+    <string name="general_user_header">GENERAL USER(S)</string>
+    <string name="add_text">Add</string>
+    <string name="revoke_text">Revoke</string>
+    <string name="withdraw_text">Withdraw</string>
+
+    <!--Request -->
+    <string name="button_accept">Accept</string>
+    <string name="button_reject">Reject</string>
+    <string name="text_accepted">Accepted</string>
+    <string name="text_rejected">Rejected</string>
+    <string name="text_content">You have received a request from <b>%s</b> for <b>%s</b> to be a <b>%s</b></string>
+    <string name="internet_con">Please check your internet connectivity.</string>
+    <string name="no_request">You do not have any new request.</string>
+    <string name="withdrawn">Withdrawn</string>
+    <!--Transfer Owner -->
+    <string name="transfer_owner">Transfer Owner</string>
+    <string name="tv_transfer_owner">Transfer to new owner</string>
+    <string name="tv_transfer_owner_success">Transfer to new owner request has been sent successfully</string>
+    <string name="add">Add</string>
+    <string name="new_owner">New Owner</string>
+    <string name="accept_confirm_msg">Please ensure you are near the lock before accepting the request. Please engage with the lock immediately after accepting the request and connect to internet for security reasons.</string>
+    <string name="accept_confirm_msg_v4">Please engage with the lock immediately after accepting the request.</string>
+    <string name="passage_is_enabled">Please disable the lock passage mode before transfer to new owner.</string>
+
+    <!--History-->
+    <string name="history">History</string>
+    <string name="no_history">You do not have any new activity log.</string>
+    <string name="no_notification">You do not have any new notification.</string>
+<!--    <string name="history_content">%s (%s) engaged the lock</string>-->
+    <string name="history_content">%1$s (%2$s) engaged the lock</string>
+    <string name="title_activity_tab_history">TabHistoryActivity</string>
+    <string name="tab_text_1">Tab 1</string>
+    <string name="tab_text_2">Tab 2</string>
+    <string name="tab_text_3">Tab 3</string>
+    <string name="action_settings">Settings</string>
+    <string name="section_format">Hello World from section: %1$d</string>
+
+    <string name="lock_failure_alert">Unable to connect the lock. Please try again. If still not connected, call support team for resolution.</string>
+    <string name="lock_schedule_alert">Please connect to internet to access schedule lock.</string>
+
+    <string name="play_store_link" translatable="false">https://play.google.com/store/apps/details?id=com.astrixengineering.ax100</string>
+
+    <!-- Version 2.0 -->
+    <string name="finger_print">Fingerprint</string>
+    <string name="user_list">User List</string>
+    <string name="finger_print_add">Add Finger Print</string>
+    <string name="rfid">RFID</string>
+    <string name="alert_select_user_type">Please select the user type</string>
+    <string name="no_user">You do not have any user associated this lock. Please add user to proceed.</string>
+    <string name="error_parser">Parser error. Please try again later.</string>
+    <string name="tap_to_add_rfid">Please switch ON the Lock and Tap here to Add RFID</string>
+    <string name="rfid_success">RFID added successfully</string>
+    <string name="finger_print_success">Finger Print added successfully</string>
+    <string name="fp_empty">There is no finger print available. Kindly tap to add new finger print.</string>
+
+    <!-- Version 3.0 -->
+    <string name="manage_privilege">Manage Privilege :</string>
+
+    <string name="digital_keys_txt">Digital Keys</string>
+    <string name="otp_keys_txt">OTP Keys</string>
+    <string name="pin">PINS</string>
+    <string name="manage_pin">Manage PINS</string>
+    <string name="rewrite_otp_message">Please rewrite OTP to the lock to proceed</string>
+    <string name="no_generated_otp_message">Please generate OTP to proceed</string>
+    <string name="generate_otp_btn">Generate OTP</string>
+    <string name="rewrite_otp_btn">ReWrite OTP</string>
+    <string name="no_pin_access_msg">Access using PINS has been disabled. Please enable the same to continue.</string>
+    <string name="no_fp_access_msg_owner">Fingerprint access has been disabled. Please enable the same to continue.</string>
+    <string name="no_fp_access_msg_master">Fingerprint access has been disabled by owner. Please reach the owner for further support.</string>
+
+    <!-- Version 4.0 -->
+    <string name="wifi_mqtt_config">Home WiFi Configuration</string>
+    <string name="lock_version">Lock Version</string>
+    <string name="wifi_ssid">WiFi SSID</string>
+    <string name="wifi_password">WiFi Password</string>
+    <string name="wifi_security_group">WiFi Security Group</string>
+    <string name="enter_wifi_ssid">Please enter wifi ssid</string>
+    <string name="enter_wifi_password">Please enter wifi password</string>
+    <string name="engage_lock_text">Please Tap here to Lock/Unlock</string>
+    <string name="home_wifi_not_connected">WiFi is not connected. Please check your WiFi credentials.</string>
+    <string name="mqtt_not_connected">Something went wrong. Please try again.</string>
+    <string name="wifi_password_length">Wifi password length must be atleast 8 characters</string>
+    <string name="notification_channel_id">Notification</string>
+
+    <string-array name="wifi_group_array">
+        <item>OPEN</item>
+        <item>WEP</item>
+        <item>WPA</item>
+        <item>WPA2</item>
+        <item>WPA+WPA2</item>
+    </string-array>
+
+    <!--V6.0-->
+    <string name="passage_mode">Passage Mode : </string>
+    <string name="passage_alert">Please Disable the Passage Mode </string>
+    <string-array name="wifi_group_array_v6.0">
+        <item>OPEN</item>
+        <item>WEP</item>
+        <item>WPA_PSK</item>
+        <item>WPA2_PSK</item>
+        <item>WPA_WPA2_PSK</item>
+    </string-array>
+
+
+    <string-array name="lock_versions">
+        <item>V1.0</item>
+        <item>V2.0</item>
+        <item>V2.1</item>
+        <item>V3.0</item>
+        <item>V3.1</item>
+        <item>V3.2</item>
+        <item>V4.0</item>
+        <item>V6.0</item>
+    </string-array>
+
+</resources>
