@@ -17,7 +17,12 @@ import androidx.activity.OnBackPressedCallback;
 import androidx.activity.OnBackPressedDispatcher;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.activity.EdgeToEdge;
+import androidx.activity.SystemBarStyle;
 import androidx.annotation.NonNull;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
@@ -132,28 +137,23 @@ public class NavigationActivity extends AppCompatActivity
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        EdgeToEdge.enable(this, SystemBarStyle.dark(android.graphics.Color.TRANSPARENT));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
+        }
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_navigation);
         OnBackPressedDispatcher();
 
-//
-//        // 1. Force the system to keep content below the status bar
-//        getWindow().setDecorFitsSystemWindows(true);
-//
-//        // 2. Add this snippet to handle the "Safe Area" for modern Android versions
-//        View mainView = findViewById(R.id.drawer_layout); // or your root layout ID
-//        if (mainView != null) {
-//            mainView.setOnApplyWindowInsetsListener((v, insets) -> {
-//                // Get the height of the status bar (top inset)
-//                int statusBarHeight = insets.getSystemWindowInsetTop();
-//
-//                // Apply it as padding to the top of your layout
-//                // This prevents the header from 'hitting' the status bar
-//                v.setPadding(0, statusBarHeight, 0, 0);
-//
-//                return insets.consumeSystemWindowInsets();
-//            });
-//        }
+        View mainView = findViewById(R.id.drawer_layout);
+        if (mainView != null) {
+            ViewCompat.setOnApplyWindowInsetsListener(mainView, (v, insets) -> {
+                Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+                // Only apply bottom padding to avoid overlapping with navigation bar
+                v.setPadding(0, 0, 0, systemBars.bottom);
+                return insets;
+            });
+        }
 
         Logger.d(TAG, TAG);
         permissionResultLauncher();
@@ -1105,10 +1105,10 @@ public class NavigationActivity extends AppCompatActivity
                             String appVersionName = BuildConfig.VERSION_NAME;
 
 
-//                            if (!resVersion.equals(appVersionName)) {
-//
-//                                showAppUpdateDialog();
-//                            }
+                        //    if (!resVersion.equals(appVersionName)) {
+
+                        //        showAppUpdateDialog();
+                        //    }
 
 
                         } else {
