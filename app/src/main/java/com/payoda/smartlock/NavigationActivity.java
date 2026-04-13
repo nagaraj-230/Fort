@@ -137,23 +137,23 @@ public class NavigationActivity extends AppCompatActivity
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        EdgeToEdge.enable(this, SystemBarStyle.dark(android.graphics.Color.TRANSPARENT));
+        /*EdgeToEdge.enable(this, SystemBarStyle.dark(android.graphics.Color.TRANSPARENT));
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
-        }
+        }*/
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_navigation);
         OnBackPressedDispatcher();
 
-        View mainView = findViewById(R.id.drawer_layout);
+        /*View mainView = findViewById(R.id.drawer_layout);
         if (mainView != null) {
             ViewCompat.setOnApplyWindowInsetsListener(mainView, (v, insets) -> {
-                Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-                // Only apply bottom padding to avoid overlapping with navigation bar
+                Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.ime());
+                // Only apply bottom padding to avoid overlapping with navigation bar or keyboard
                 v.setPadding(0, 0, 0, systemBars.bottom);
                 return insets;
             });
-        }
+        }*/
 
         Logger.d(TAG, TAG);
         permissionResultLauncher();
@@ -180,6 +180,13 @@ public class NavigationActivity extends AppCompatActivity
 
         final ViewPager2 mViewPager = findViewById(R.id.viewpager);
         mViewPager.setAdapter(new ViewPagerAdapter(this));
+
+        // Use the ViewPager2 directly for inset handling to ensure fragments resize with the keyboard
+        ViewCompat.setOnApplyWindowInsetsListener(mViewPager, (v, insets) -> {
+            Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.ime());
+            v.setPadding(0, 0, 0, bars.bottom);
+            return insets;
+        });
 
         TabLayout tabLayout = findViewById(R.id.tabs);
         new TabLayoutMediator(tabLayout, mViewPager, (tab, position) -> {
