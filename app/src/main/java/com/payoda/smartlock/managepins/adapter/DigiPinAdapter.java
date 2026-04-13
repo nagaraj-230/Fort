@@ -4,9 +4,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.os.Build;
 import android.text.Editable;
-import android.text.TextUtils;
 import android.text.TextWatcher;
-import android.util.Log;
 import android.view.ActionMode;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -24,18 +22,16 @@ import com.google.gson.internal.LinkedTreeMap;
 import com.payoda.smartlock.R;
 import com.payoda.smartlock.plugins.pinview.PinOnKeyListener;
 import com.payoda.smartlock.plugins.pinview.PinTextWatcher;
-import com.payoda.smartlock.utils.Logger;
 
 import java.util.ArrayList;
 
 public class DigiPinAdapter extends RecyclerView.Adapter<DigiPinAdapter.MyViewHolder> {
     private LayoutInflater inflater;
-    public static ArrayList<DigiPinModel> editModelArrayList;
-    private static Activity activity;
+    private ArrayList<DigiPinModel> editModelArrayList;
+    private Activity activity;
     private boolean isFirstLoad;
 
     public DigiPinAdapter(Activity activity, Context ctx, ArrayList<DigiPinModel> editModelArrayList, boolean isFirstLoad) {
-
         inflater = LayoutInflater.from(ctx);
         this.activity = activity;
         this.editModelArrayList = editModelArrayList;
@@ -46,24 +42,15 @@ public class DigiPinAdapter extends RecyclerView.Adapter<DigiPinAdapter.MyViewHo
     @Override
     public MyViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = inflater.inflate(R.layout.layout_digi_pin_item, parent, false);
-        MyViewHolder holder = new MyViewHolder(view);
-
-        return holder;
-    }
-
-    @Override
-    public long getItemId(int position) {
-        return position;
-    }
-
-    @Override public int getItemViewType(int position) {
-        return position;
+        return new MyViewHolder(view);
     }
 
     @Override
     public void onBindViewHolder(@NonNull MyViewHolder holder, int position) {
+        DigiPinModel digiPinModel = editModelArrayList.get(position);
 
-        DigiPinModel digiPinModel = editModelArrayList.get(holder.getAdapterPosition());
+        // Remove listeners before setting programmatically to avoid recursive updates
+        holder.removeListeners();
 
         holder.indexTextView.setText(digiPinModel.getIndexValue());
 
@@ -74,47 +61,39 @@ public class DigiPinAdapter extends RecyclerView.Adapter<DigiPinAdapter.MyViewHo
             holder.pinNameEditText.setText(digiPinModel.getEditTextValue());
         }
 
-        holder.setTextForPinTextView(digiPinModel.getPinValue(), position);
+        holder.setTextForPinTextView(digiPinModel.getPinValue());
+
+        // Re-attach listeners after UI is updated
+        holder.attachListeners(position);
     }
 
     @Override
     public int getItemCount() {
-        return editModelArrayList.size();
+        return editModelArrayList != null ? editModelArrayList.size() : 0;
     }
 
     class MyViewHolder extends RecyclerView.ViewHolder {
-
         protected TextView indexTextView;
         protected EditText pinNameEditText;
+        protected AppCompatEditText pinBox1, pinBox2, pinBox3, pinBox4;
+        protected ArrayList<AppCompatEditText> otpEditTextViews = new ArrayList<>();
 
-        protected AppCompatEditText pinBox1;
-        protected AppCompatEditText pinBox2;
-        protected AppCompatEditText pinBox3;
-        protected AppCompatEditText pinBox4;
-
-        protected ArrayList<AppCompatEditText> otpEditTextViews = new ArrayList<AppCompatEditText>();
+        private TextWatcher nameWatcher;
+        private TextWatcher pinWatcher1, pinWatcher2, pinWatcher3, pinWatcher4;
 
         public MyViewHolder(@NonNull View itemView) {
             super(itemView);
-
-            indexTextView = (TextView) itemView.findViewById(R.id.tv_index);
-
-            pinNameEditText = (EditText) itemView.findViewById(R.id.et_pin_name);
-
-            pinBox1 = (AppCompatEditText) itemView.findViewById(R.id.pin1);
-            pinBox2 = (AppCompatEditText) itemView.findViewById(R.id.pin2);
-            pinBox3 = (AppCompatEditText) itemView.findViewById(R.id.pin3);
-            pinBox4 = (AppCompatEditText) itemView.findViewById(R.id.pin4);
+            indexTextView = itemView.findViewById(R.id.tv_index);
+            pinNameEditText = itemView.findViewById(R.id.et_pin_name);
+            pinBox1 = itemView.findViewById(R.id.pin1);
+            pinBox2 = itemView.findViewById(R.id.pin2);
+            pinBox3 = itemView.findViewById(R.id.pin3);
+            pinBox4 = itemView.findViewById(R.id.pin4);
 
             otpEditTextViews.add(pinBox1);
             otpEditTextViews.add(pinBox2);
             otpEditTextViews.add(pinBox3);
             otpEditTextViews.add(pinBox4);
-
-            pinBox1.addTextChangedListener(new PinTextWatcher(0, otpEditTextViews, activity, text -> editModelArrayList.get(getAdapterPosition()).setPinValue(getPinValue())));
-            pinBox2.addTextChangedListener(new PinTextWatcher(1, otpEditTextViews, activity, text -> editModelArrayList.get(getAdapterPosition()).setPinValue(getPinValue())));
-            pinBox3.addTextChangedListener(new PinTextWatcher(2, otpEditTextViews, activity, text -> editModelArrayList.get(getAdapterPosition()).setPinValue(getPinValue())));
-            pinBox4.addTextChangedListener(new PinTextWatcher(3, otpEditTextViews, activity, text -> editModelArrayList.get(getAdapterPosition()).setPinValue(getPinValue())));
 
             pinBox1.setOnKeyListener(new PinOnKeyListener(0, otpEditTextViews));
             pinBox2.setOnKeyListener(new PinOnKeyListener(1, otpEditTextViews));
@@ -126,110 +105,102 @@ public class DigiPinAdapter extends RecyclerView.Adapter<DigiPinAdapter.MyViewHo
             disableSelectionMenu(pinBox3);
             disableSelectionMenu(pinBox4);
 
-            pinNameEditText.addTextChangedListener(new TextWatcher() {
-                @Override
-                public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+            pinNameEditText.setOnFocusChangeListener(focusChangeListener);
+            pinBox1.setOnFocusChangeListener(focusChangeListener);
+            pinBox2.setOnFocusChangeListener(focusChangeListener);
+            pinBox3.setOnFocusChangeListener(focusChangeListener);
+            pinBox4.setOnFocusChangeListener(focusChangeListener);
+        }
 
+        private final View.OnFocusChangeListener focusChangeListener = new View.OnFocusChangeListener() {
+            @Override
+            public void onFocusChange(View v, boolean hasFocus) {
+                if (hasFocus) {
+                    v.postDelayed(() -> {
+                        int pos = getAdapterPosition();
+                        if (pos != RecyclerView.NO_POSITION) {
+                            RecyclerView recyclerView = (RecyclerView) itemView.getParent();
+                            if (recyclerView != null) {
+                                recyclerView.smoothScrollToPosition(pos);
+                            }
+                        }
+                    }, 500);
                 }
+            }
+        };
 
-                @Override
-                public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-                    editModelArrayList.get(getAdapterPosition()).setEditTextValue(pinNameEditText.getText().toString());
+        public void removeListeners() {
+            if (nameWatcher != null) pinNameEditText.removeTextChangedListener(nameWatcher);
+            if (pinWatcher1 != null) pinBox1.removeTextChangedListener(pinWatcher1);
+            if (pinWatcher2 != null) pinBox2.removeTextChangedListener(pinWatcher2);
+            if (pinWatcher3 != null) pinBox3.removeTextChangedListener(pinWatcher3);
+            if (pinWatcher4 != null) pinBox4.removeTextChangedListener(pinWatcher4);
+        }
+
+        public void attachListeners(final int position) {
+            nameWatcher = new TextWatcher() {
+                @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    int pos = getAdapterPosition();
+                    if (pos != RecyclerView.NO_POSITION) {
+                        editModelArrayList.get(pos).setEditTextValue(s.toString());
+                    }
                 }
+                @Override public void afterTextChanged(Editable s) {}
+            };
+            pinNameEditText.addTextChangedListener(nameWatcher);
 
-                @Override
-                public void afterTextChanged(Editable editable) {
+            pinWatcher1 = new PinTextWatcher(0, otpEditTextViews, activity, text -> updatePin(getAdapterPosition()));
+            pinWatcher2 = new PinTextWatcher(1, otpEditTextViews, activity, text -> updatePin(getAdapterPosition()));
+            pinWatcher3 = new PinTextWatcher(2, otpEditTextViews, activity, text -> updatePin(getAdapterPosition()));
+            pinWatcher4 = new PinTextWatcher(3, otpEditTextViews, activity, text -> updatePin(getAdapterPosition()));
 
-                }
-            });
+            pinBox1.addTextChangedListener(pinWatcher1);
+            pinBox2.addTextChangedListener(pinWatcher2);
+            pinBox3.addTextChangedListener(pinWatcher3);
+            pinBox4.addTextChangedListener(pinWatcher4);
+        }
 
-            /*pinNameEditText.setOnFocusChangeListener(new View.OnFocusChangeListener() {
-                public void onFocusChange(View v, boolean hasFocus) {
-                    if (hasFocus)
-                        pinNameEditText.setHint("");
-                    else
-                        pinNameEditText.setHint("Name");
-                }
-            });*/
-
+        private void updatePin(int pos) {
+            if (pos != RecyclerView.NO_POSITION) {
+                editModelArrayList.get(pos).setPinValue(getPinValue());
+            }
         }
 
         private void disableSelectionMenu(AppCompatEditText editText) {
-            editText.setCustomSelectionActionModeCallback(new DigiPinAdapter.DefaultActionModeCallback());
+            editText.setCustomSelectionActionModeCallback(new DefaultActionModeCallback());
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                editText.setCustomInsertionActionModeCallback(new DigiPinAdapter.DefaultActionModeCallback() {
+                editText.setCustomInsertionActionModeCallback(new DefaultActionModeCallback() {
                     @Override
                     public boolean onCreateActionMode(ActionMode mode, Menu menu) {
                         menu.removeItem(android.R.id.autofill);
                         return true;
                     }
                 });
-
             }
         }
 
         public LinkedTreeMap<Integer, String> getPinValue() {
             LinkedTreeMap<Integer, String> pinHash = new LinkedTreeMap<>();
-            if (pinBox1 != null && !pinBox1.getText().toString().isEmpty()) {
-                pinHash.put(0, pinBox1.getText().toString());
-            } else {
-                pinHash.put(0, "");
-            }
-            if (pinBox2 != null && !pinBox2.getText().toString().isEmpty()) {
-                pinHash.put(1, pinBox2.getText().toString());
-            } else {
-                pinHash.put(1, "");
-            }
-            if (pinBox3 != null && !pinBox3.getText().toString().isEmpty()) {
-                pinHash.put(2, pinBox3.getText().toString());
-            } else {
-                pinHash.put(2, "");
-            }
-            if (pinBox4 != null && !pinBox4.getText().toString().isEmpty()) {
-                pinHash.put(3, pinBox4.getText().toString());
-            } else {
-                pinHash.put(3, "");
-            }
+            pinHash.put(0, pinBox1.getText().toString());
+            pinHash.put(1, pinBox2.getText().toString());
+            pinHash.put(2, pinBox3.getText().toString());
+            pinHash.put(3, pinBox4.getText().toString());
             return pinHash;
         }
 
-        public void setTextForPinTextView(LinkedTreeMap<Integer, String> pinValue, int position) {
-            int i = 0;
-            if (pinValue.isEmpty()) {
-                while (i < 4) {
-//                    otpEditTextViews.get(i).setText("");
-                    i++;
-                }
-            } else {
-                for (LinkedTreeMap.Entry<Integer, String> entry : pinValue.entrySet()) {
-                    otpEditTextViews.get(i).setText(entry.getValue());
-                    i++;
-                }
+        public void setTextForPinTextView(LinkedTreeMap<Integer, String> pinValue) {
+            for (int i = 0; i < 4; i++) {
+                String val = (pinValue != null && pinValue.containsKey(i)) ? pinValue.get(i) : "";
+                otpEditTextViews.get(i).setText(val);
             }
         }
     }
 
     public static class DefaultActionModeCallback implements ActionMode.Callback {
-
-        @Override
-        public boolean onCreateActionMode(ActionMode mode, Menu menu) {
-            return false;
-        }
-
-        @Override
-        public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
-            return false;
-        }
-
-        @Override
-        public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
-            return false;
-        }
-
-        @Override
-        public void onDestroyActionMode(ActionMode mode) {
-
-        }
+        @Override public boolean onCreateActionMode(ActionMode mode, Menu menu) { return false; }
+        @Override public boolean onPrepareActionMode(ActionMode mode, Menu menu) { return false; }
+        @Override public boolean onActionItemClicked(ActionMode mode, MenuItem item) { return false; }
+        @Override public void onDestroyActionMode(ActionMode mode) {}
     }
-
 }

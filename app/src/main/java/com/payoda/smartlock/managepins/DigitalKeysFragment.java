@@ -156,6 +156,7 @@ public class DigitalKeysFragment extends BaseFragment {
         // Set Layout Manager
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getContext());
         recyclerView.setLayoutManager(linearLayoutManager);
+        recyclerView.setNestedScrollingEnabled(true);
 
         // Limiting the size
         recyclerView.setHasFixedSize(true);

@@ -155,6 +155,7 @@ public class OtpKeysFragment extends Fragment {
 
         // Limiting the size
         recyclerView.setHasFixedSize(true);
+        recyclerView.setNestedScrollingEnabled(true);
 
         btnGenerateOtp = rootView.findViewById(R.id.btnGenerateOtp);
         btnReWriteOtp = rootView.findViewById(R.id.btnReWriteOtp);
