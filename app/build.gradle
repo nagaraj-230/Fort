@@ -61,6 +61,8 @@ android {
 //    ndkVersion 29.0.13599879 rc2
     packagingOptions {
         jniLibs {
+            // 16 KB alignment for uncompressed libraries in the AAB/APK.
+            useLegacyPackaging = false
             pickFirsts += ['lib/*/libtool-checker.so']
         }
     }
@@ -68,7 +70,7 @@ android {
     externalNativeBuild {
         cmake {
             path "src/main/c/CMakeLists.txt"
-            version "3.10.2"
+            version "3.22.1" // Upgrading from version "3.10.2"
         }
     }
 
@@ -374,7 +376,8 @@ dependencies {
     implementation "com.microsoft.appcenter:appcenter-analytics:4.1.0"
     implementation "com.microsoft.appcenter:appcenter-crashes:4.1.0"
 
-    implementation files('libs/rootchecker-release.aar')
+//    implementation files('libs/rootchecker-release.aar')
+    implementation 'com.scottyab:rootbeer-lib:0.1.1'
     implementation files('libs/countryDialCode-release.aar')
 
     implementation 'io.michaelrocks:libphonenumber-android:8.12.37'

@@ -9,7 +9,8 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.payoda.rootchecker.SourceIDE;
+//import com.payoda.rootchecker.SourceIDE;
+import com.scottyab.rootbeer.RootBeer;
 import com.payoda.smartlock.App;
 import com.payoda.smartlock.BuildConfig;
 import com.payoda.smartlock.FullscreenActivity;
@@ -119,11 +120,17 @@ public class SplashActivity extends AppCompatActivity {
 
     private void InvokeMainActivity() {
 
-        SourceIDE sourceIDE = new SourceIDE(SplashActivity.this);
+//        SourceIDE sourceIDE = new SourceIDE(SplashActivity.this);
+//
+//        boolean isRoot3 = sourceIDE.isSource() && sourceIDE.isRootedWithoutBusyBoxCheck();
 
-        boolean isRoot3 = sourceIDE.isSource() && sourceIDE.isRootedWithoutBusyBoxCheck();
+        // New RootBeer instance
+        RootBeer rootBeer = new RootBeer(SplashActivity.this);
+        // This performs a comprehensive check (similar to your old isRootedWithoutBusyBoxCheck)
+        boolean isRooted = rootBeer.isRooted();
 
-        if (isRoot3) {
+//        if (isRoot3) {
+        if (isRooted) {
             SplashActivity.this.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {

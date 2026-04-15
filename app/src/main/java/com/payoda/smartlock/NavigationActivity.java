@@ -1112,10 +1112,10 @@ public class NavigationActivity extends AppCompatActivity
                             String appVersionName = BuildConfig.VERSION_NAME;
 
 
-                        //    if (!resVersion.equals(appVersionName)) {
+                            if (!resVersion.equals(appVersionName)) {
 
-                        //        showAppUpdateDialog();
-                        //    }
+                                showAppUpdateDialog();
+                            }
 
 
                         } else {
