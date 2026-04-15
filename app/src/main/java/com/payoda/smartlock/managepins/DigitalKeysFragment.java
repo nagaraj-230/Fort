@@ -245,7 +245,7 @@ public class DigitalKeysFragment extends BaseFragment {
                 char textArray[] = pin.toCharArray();
                 LinkedTreeMap<Integer, String> pinHash = new LinkedTreeMap<>();
                 for (int index = 0; index < textArray.length; index++) {
-                    pinHash.put(index + 1, String.valueOf(textArray[index]));
+                    pinHash.put(index, String.valueOf(textArray[index]));
                 }
 
                 editModel.setPinValue(pinHash);
@@ -336,7 +336,7 @@ public class DigitalKeysFragment extends BaseFragment {
             reWritePinMqtt.setName7((name7 != null && !name7.isEmpty()) ? name7 : "");
 
             String pin8 = convertHashMapToString(digiPinModelArrayList.get(7).getPinValue());
-            reWritePinMqtt.setPin8((pin1 != null && !pin8.isEmpty()) ? aesEncryption.encrypt(pin8, true) : "0000");
+            reWritePinMqtt.setPin8((pin8 != null && !pin8.isEmpty()) ? aesEncryption.encrypt(pin8, true) : "0000");
             String name8 = digiPinModelArrayList.get(7).getEditTextValue();
             reWritePinMqtt.setName8((name8 != null && !name8.isEmpty()) ? name8 : "");
 
@@ -486,7 +486,7 @@ public class DigitalKeysFragment extends BaseFragment {
         reWritePin.setPin7((pin7 != null && !pin7.isEmpty()) ? pin7 : "0000");
 
         String pin8 = convertHashMapToString(digiPinModelArrayList.get(7).getPinValue());
-        reWritePin.setPin8((pin1 != null && !pin8.isEmpty()) ? pin8 : "0000");
+        reWritePin.setPin8((pin8 != null && !pin8.isEmpty()) ? pin8 : "0000");
 
         String pin9 = convertHashMapToString(digiPinModelArrayList.get(8).getPinValue());
         reWritePin.setPin9((pin9 != null && !pin9.isEmpty()) ? pin9 : "0000");

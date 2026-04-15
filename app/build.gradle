@@ -308,8 +308,8 @@ android {
         novaProd {
             dimension "tier"
             applicationId "com.tbi.fort.nova.locks"
-            versionCode 11
-            versionName "1.1"
+            versionCode 12
+            versionName "1.2"
             buildConfigField("String", "APPCENTER_KEY", "\"1ec2d533-08b7-49ff-8742-d251f5c468eb\"")
             //buildConfigField("String", "BASE_URL", "\"http://fortlive.co.in\"") // staging
             //buildConfigField("String", "BASE_URL", "\"http://fortstaging.co.in\"")

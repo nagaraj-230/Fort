@@ -1,6 +1,9 @@
 package com.payoda.smartlock.managepins;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentPagerAdapter;
@@ -101,6 +104,11 @@ public class TabManagePinsActivity extends AppCompatActivity implements Inactive
         // Set up the ViewPager with the sections adapter.
         mViewPager = (ViewPager) findViewById(R.id.manage_pin_container);
         mViewPager.setAdapter(mSectionsPagerAdapter);
+        ViewCompat.setOnApplyWindowInsetsListener(mViewPager, (v, insets) -> {
+            Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.ime());
+            v.setPadding(v.getPaddingLeft(), v.getPaddingTop(), v.getPaddingRight(), bars.bottom);
+            return insets;
+        });
         //LinearLayout header = findViewById(R.id.header);
         ((TextView) findViewById(R.id.tv_title)).setText(getString(R.string.manage_pin));
         findViewById(R.id.iv_back).setOnClickListener(new View.OnClickListener() {
