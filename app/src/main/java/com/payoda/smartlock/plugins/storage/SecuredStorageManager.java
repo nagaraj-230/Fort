@@ -679,6 +679,80 @@ public class SecuredStorageManager {
         putString(RESET_PIN, null);
     }
 
+    public String getLastNotifiedFpLogId() {
+        return getString("last_notified_fp_log_id", "");
+    }
+
+    public void setLastNotifiedFpLogId(String data) {
+        putString("last_notified_fp_log_id", data);
+    }
+
+    public String getNotifiedOtpIds() {
+        return getString("notified_otp_ids", "");
+    }
+
+    public void addNotifiedOtpId(String keyId) {
+        if (TextUtils.isEmpty(keyId)) return;
+        String currentIds = getNotifiedOtpIds();
+        if (TextUtils.isEmpty(currentIds)) {
+            putString("notified_otp_ids", keyId);
+        } else {
+            String[] parts = currentIds.split(",");
+            boolean exists = false;
+            for (String p : parts) {
+                if (keyId.equals(p)) {
+                    exists = true;
+                    break;
+                }
+            }
+            if (!exists) {
+                putString("notified_otp_ids", currentIds + "," + keyId);
+            }
+        }
+    }
+
+    public void removeNotifiedOtpId(String keyId) {
+        if (TextUtils.isEmpty(keyId)) return;
+        String currentIds = getNotifiedOtpIds();
+        if (TextUtils.isEmpty(currentIds)) return;
+        String[] parts = currentIds.split(",");
+        StringBuilder sb = new StringBuilder();
+        boolean first = true;
+        for (String p : parts) {
+            if (!keyId.equals(p)) {
+                if (!first) {
+                    sb.append(",");
+                }
+                sb.append(p);
+                first = false;
+            }
+        }
+        putString("notified_otp_ids", sb.toString());
+    }
+
+    public boolean isOtpIdNotified(String keyId) {
+        if (TextUtils.isEmpty(keyId)) return false;
+        String currentIds = getNotifiedOtpIds();
+        if (TextUtils.isEmpty(currentIds)) return false;
+        String[] parts = currentIds.split(",");
+        for (String p : parts) {
+            if (keyId.equals(p)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Clears the entire notified OTP ID cache.
+     * Called ONLY when generateNewOtpBatch() succeeds (next="1"), because the server
+     * reuses the same database slot IDs for every new batch. Without clearing, the old
+     * slot IDs would block every key in the new batch and nothing would be displayed.
+     */
+    public void clearAllNotifiedOtpIds() {
+        putString("notified_otp_ids", "");
+    }
+
 
     // Timeout Seconds
     public long getTimeOutSeconds() {

@@ -70,7 +70,8 @@ public class OtpKeyService {
 
     public void getOtp(String lockId, String next, ResponseHandler handler){
         this.responseHandler = handler;
-        ServiceManager.getInstance().get(String.format(ServiceUrl.GET_OTP,lockId,next),null,handler);
+        String url = String.format(ServiceUrl.GET_OTP, lockId, next) + "&t=" + System.currentTimeMillis();
+        ServiceManager.getInstance().get(url, null, handler);
     }
 
 

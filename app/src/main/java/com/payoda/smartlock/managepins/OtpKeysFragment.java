@@ -28,6 +28,7 @@ import com.payoda.smartlock.BuildConfig;
 import com.payoda.smartlock.R;
 import com.payoda.smartlock.constants.Constant;
 import com.payoda.smartlock.constants.ServiceUrl;
+import com.payoda.smartlock.locks.LockDetailFragment;
 import com.payoda.smartlock.locks.LockManager;
 import com.payoda.smartlock.locks.model.Lock;
 import com.payoda.smartlock.locks.model.LockKeys;
@@ -137,6 +138,14 @@ public class OtpKeysFragment extends Fragment {
         }
     }
 
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    public void onRefreshOtpEvent(LockDetailFragment.RefreshOtpEvent event) {
+        if (mLock != null && getContext() != null) {
+            Logger.d(TAG, "Received RefreshOtpEvent. Refreshing OTP list.");
+            doGetOtp(getContext(), mLock.getId(), "0", false);
+        }
+    }
+
     private View initializeView(View rootView) {
 
         llNoOtpView = rootView.findViewById(R.id.ll_rewrite_otp_container);
@@ -174,11 +183,11 @@ public class OtpKeysFragment extends Fragment {
             }
         });
 
-        if (mLock != null && mLock.getEnablePin() != null && mLock.getEnablePin().equalsIgnoreCase("1")) {
+        if (mLock != null) {
             doGetOtp(getContext(), mLock.getId(), "0", true);
         }
 
-        newFlowVersion6(true);
+        newFlowVersion6(false);
 
         return rootView;
 
@@ -189,9 +198,9 @@ public class OtpKeysFragment extends Fragment {
         if (mLock.getLockVersion().equalsIgnoreCase(Constant.HW_VERSION_6_0)) {
 
             btnReWriteOtp.setVisibility(View.GONE);
-            btnGenerateOtp.setVisibility(View.VISIBLE);
+            btnGenerateOtp.setVisibility(View.GONE);
 
-            if (mLock != null && mLock.getEnablePin() != null && mLock.getEnablePin().equalsIgnoreCase("1")) {
+            if (mLock != null) {
 
 
                 if (allowAPI){
@@ -480,14 +489,22 @@ public class OtpKeysFragment extends Fragment {
             if (lockKeys != null && lockKeys.size() > 0) {
 
                 for (int i = 0; i < lockKeys.size(); i++) {
-
-
+                    LockKeys lk = lockKeys.get(i);
                     OtpModel otpModel = new OtpModel();
-                    otpModel.setOtp(aesEncryption.decrypt(lockKeys.get(i).getKey(), true));
-                    otpModel.setStatus(lockKeys.get(i).getStatus());
-                    otpModel.setRequestTime(lockKeys.get(i).getAssigned_datetime());
+                    otpModel.setOtp(aesEncryption.decrypt(lk.getKey(), true));
+                    
+                    String status = lk.getStatus();
+                    if (status != null && status.equals("1")) {
+                        if (SecuredStorageManager.getInstance().isOtpIdNotified(lk.getId())) {
+                            status = "2";
+                        }
+                    } else if (status != null && status.equals("2")) {
+                        SecuredStorageManager.getInstance().removeNotifiedOtpId(lk.getId());
+                    }
+                    
+                    otpModel.setStatus(status);
+                    otpModel.setRequestTime(lk.getAssigned_datetime());
                     list.add(otpModel);
-
                 }
             }
 
@@ -514,12 +531,7 @@ public class OtpKeysFragment extends Fragment {
 
             Logger.d("### is get otp = " + otpResponse.getOtpData().isGetOtp());
 
-            if (otpResponse.getOtpData().isGetOtp()) {
-                btnGenerateOtp.setVisibility(View.VISIBLE);
-            }
-            else {
-                btnGenerateOtp.setVisibility(View.GONE);
-            }
+            btnGenerateOtp.setVisibility(View.GONE);
 
             newFlowVersion6(false);
 
@@ -529,13 +541,12 @@ public class OtpKeysFragment extends Fragment {
             recyclerView.setVisibility(View.GONE);
             llNoOtpView.setVisibility(View.VISIBLE);
             tvReWriteOtp.setVisibility(View.VISIBLE);
+            btnGenerateOtp.setVisibility(View.GONE);
             if (otpResponse.getOtpData().isGetOtp()) {
                 tvReWriteOtp.setText(getContext().getString(R.string.no_generated_otp_message));
-                btnGenerateOtp.setVisibility(View.VISIBLE);
             } else {
                 if (!mLock.getLockVersion().equalsIgnoreCase(Constant.HW_VERSION_6_0)) {
                     tvReWriteOtp.setText(getContext().getString(R.string.rewrite_otp_message));
-                    btnGenerateOtp.setVisibility(View.GONE);
                 } else {
                     if (getContext() != null)
                         tvReWriteOtp.setText(getContext().getString(R.string.no_generated_otp_message));

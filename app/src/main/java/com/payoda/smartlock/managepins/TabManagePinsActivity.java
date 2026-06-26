@@ -110,7 +110,7 @@ public class TabManagePinsActivity extends AppCompatActivity implements Inactive
             return insets;
         });
         //LinearLayout header = findViewById(R.id.header);
-        ((TextView) findViewById(R.id.tv_title)).setText(getString(R.string.manage_pin));
+        ((TextView) findViewById(R.id.tv_title)).setText(getString(R.string.otp_keys_txt));
         findViewById(R.id.iv_back).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -169,28 +169,21 @@ public class TabManagePinsActivity extends AppCompatActivity implements Inactive
         otpKeysFragment = OtpKeysFragment.getInstance();
         otpKeysFragment.setArguments(bundle);
 
-        boolean pinAccess = (mLock.getEnablePin() != null && mLock.getEnablePin().equalsIgnoreCase("1")) ? true : false;
-        if (pinAccess) {
-            allowAPICall = false;
-            managePinSimpleSwitch.setChecked(true);
-            showTabAndOtherControls();
-        } else {
-            managePinSimpleSwitch.setChecked(false);
-            hideTabAndOtherControls();
-        }
+        managePinSimpleSwitch.setVisibility(View.GONE);
+        showTabAndOtherControls();
     }
 
     private void hideTabAndOtherControls() {
         managePinDivider.setVisibility(View.GONE);
         tabLayout.setVisibility(View.GONE);
-        mViewPager.setVisibility(View.GONE);
+        mViewPager.setVisibility(View.VISIBLE);
 
-        tvNoAccess.setVisibility(View.VISIBLE);
+        tvNoAccess.setVisibility(View.GONE);
     }
 
     private void showTabAndOtherControls() {
-        managePinDivider.setVisibility(View.VISIBLE);
-        tabLayout.setVisibility(View.VISIBLE);
+        managePinDivider.setVisibility(View.GONE);
+        tabLayout.setVisibility(View.GONE);
         mViewPager.setVisibility(View.VISIBLE);
 
         tvNoAccess.setVisibility(View.GONE);
@@ -392,17 +385,13 @@ public class TabManagePinsActivity extends AppCompatActivity implements Inactive
 
         @Override
         public Fragment getItem(int position) {
-            if (position == 1) {
-                return otpKeysFragment;
-            } else {
-                return digitalKeysFragment;
-            }
+            return otpKeysFragment;
         }
 
         @Override
         public int getCount() {
-            // Show 2 total pages.
-            return 2;
+            // Show 1 total pages.
+            return 1;
         }
     }
 

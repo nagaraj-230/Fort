@@ -81,6 +81,14 @@ import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import androidx.core.app.NotificationCompat;
+import com.payoda.smartlock.history.model.History;
+import com.payoda.smartlock.history.model.HistoryList;
+import com.payoda.smartlock.managepins.model.OtpResponse;
+import com.payoda.smartlock.managepins.service.OtpKeyService;
+
 import java.math.BigInteger;
 import java.util.ArrayList;
 
@@ -143,6 +151,13 @@ public class LockDetailFragment extends BaseFragment {
         //Check WifiLock
         setBleContainer(!WifiLockManager.getInstance().isWifiLockConnected(getContext()));
         initSyncService();
+        startHistoryPolling();
+    }
+
+    @Override
+    public void onPause() {
+        stopHistoryPolling();
+        super.onPause();
     }
 
     private void initSyncService() {
@@ -234,6 +249,8 @@ public class LockDetailFragment extends BaseFragment {
         btnFP = view.findViewById(R.id.btn_fp);
         btnRFID = view.findViewById(R.id.btn_rfid);
         btnManagePin = view.findViewById(R.id.btn_manage_pin);
+        btnManagePin.setText(getString(R.string.otp_keys_txt));
+        btnManagePin.setCompoundDrawablesWithIntrinsicBounds(0, R.mipmap.ic_log_otp, 0, 0);
         btnHistoryV3 = view.findViewById(R.id.btn_history_v3);
         llUserHistoryV3 = view.findViewById(R.id.ll_user_history_container_v3);
         tvBattery = view.findViewById(R.id.tv_battery);
@@ -1006,7 +1023,7 @@ public class LockDetailFragment extends BaseFragment {
                 Logger.d("### LockDetailFrag UpdateUI 1 ");
 
                 tvEngageToProceed.setVisibility(View.VISIBLE);
-                switchPassageMode.setVisibility(View.GONE); // TODO GONE
+                switchPassageMode.setVisibility(View.GONE);
 
 
             } else if (mLock.isOffline()) {
@@ -1015,8 +1032,11 @@ public class LockDetailFragment extends BaseFragment {
 
                 tvEngageToProceed.setVisibility(View.GONE);
                 btnHistory.setVisibility(View.VISIBLE);
-                showFPAndRFID();
-                btnUser.setVisibility(View.VISIBLE);
+                btnFP.setVisibility(View.VISIBLE);
+                btnManagePin.setVisibility(View.VISIBLE);
+                btnUser.setVisibility(View.GONE);
+                btnRFID.setVisibility(View.GONE);
+                llUserHistoryV3.setVisibility(View.GONE);
                 updateBattery();
                 tvBattery.setVisibility(View.VISIBLE);
                 lblBatteryLabel.setVisibility(View.VISIBLE);
@@ -1038,67 +1058,21 @@ public class LockDetailFragment extends BaseFragment {
                 }
 
                 if (mLockUserType.equalsIgnoreCase(Constant.OWNER)) {
-
-                    // Owner UI
                     ivEdit.setVisibility(View.VISIBLE);
-
-                    if (mLock.getLockVersion() != null &&
-                            (mLock.getLockVersion().equalsIgnoreCase(Constant.HW_VERSION_3)
-                                    || mLock.getLockVersion().equalsIgnoreCase(Constant.HW_VERSION_3_1)
-                                    || mLock.getLockVersion().equalsIgnoreCase(Constant.HW_VERSION_3_2)
-                                    || mLock.getLockVersion().equalsIgnoreCase(HW_VERSION_4_0)
-                                    || mLock.getLockVersion().equalsIgnoreCase(HW_VERSION_6_0))) {
-
-                        btnManagePin.setVisibility(View.VISIBLE);
-                        btnHistory.setVisibility(View.GONE);
-                        llUserHistoryV3.setVisibility(View.VISIBLE);
-
-                    } else {
-
-                        btnHistory.setVisibility(View.VISIBLE);
-                    }
-
-
-                    if (mLock.getLockVersion() != null && (mLock.getLockVersion().equalsIgnoreCase(HW_VERSION_6_0))) {
-                        updatePassageModeButtonAndWifiConfig();
-                    }
-
-                    showFPAndRFID();
-                    btnUser.setVisibility(View.VISIBLE);
-                    tvFactoryReset.setVisibility(View.GONE);
-                    tvEngageToProceed.setVisibility(View.GONE);
-
                 }
 
-                else if (mLockUserType.equalsIgnoreCase(Constant.MASTER)) {
+                btnFP.setVisibility(View.VISIBLE);
+                btnManagePin.setVisibility(View.VISIBLE);
+                btnHistory.setVisibility(View.VISIBLE);
+                btnUser.setVisibility(View.GONE);
+                btnRFID.setVisibility(View.GONE);
+                llUserHistoryV3.setVisibility(View.GONE);
+                tvFactoryReset.setVisibility(View.GONE);
+                tvEngageToProceed.setVisibility(View.GONE);
 
-                    // Master UI
-                    btnHistory.setVisibility(View.VISIBLE);
-                    btnUser.setVisibility(View.VISIBLE);
-
-                    tvEngageToProceed.setVisibility(View.GONE);
-
-                    String previlageId = mLock.getPrivilege();
-                    String lockUserId = mLock.getUserId() != null ? mLock.getUserId() : "";
-                    String key1UserId = mLock.getLockKeys().get(0).getUserId() != null ? mLock.getLockKeys().get(0).getUserId() : "";
-                    String key2UserId = mLock.getLockKeys().get(1).getUserId() != null ? mLock.getLockKeys().get(1).getUserId() : "";
-
-                    Logger.d("######## previlageId : "+previlageId);
-                    Logger.d("######## lockUserId : "+lockUserId);
-                    Logger.d("######## key1UserId : "+key1UserId);
-                    Logger.d("######## key2UserId : "+key2UserId);
-
-                    if (!TextUtils.isEmpty(previlageId) && (lockUserId.equalsIgnoreCase(previlageId)
-                            || key1UserId.equalsIgnoreCase(previlageId) || key2UserId.equalsIgnoreCase(previlageId))) {
-                        showFPAndRFID();
-                    }
-
-                } else {
-                    // USER UI
-                    btnHistory.setVisibility(View.VISIBLE);
-                    tvEngageToProceed.setVisibility(View.GONE);
+                if (mLock.getLockVersion() != null && (mLock.getLockVersion().equalsIgnoreCase(HW_VERSION_6_0))) {
+                    updatePassageModeButtonAndWifiConfig();
                 }
-
             }
         }
     }
@@ -1126,7 +1100,7 @@ public class LockDetailFragment extends BaseFragment {
 
                 if (userType.equalsIgnoreCase(Constant.OWNER)) { //3
 
-                    switchPassageMode.setVisibility(View.VISIBLE);
+                    switchPassageMode.setVisibility(View.GONE);
 
                     ivSettings.setVisibility(View.VISIBLE);
 
@@ -1630,6 +1604,252 @@ public class LockDetailFragment extends BaseFragment {
                     validateDoorName();
                     break;
             }
+        }
+    }
+
+    public static class RefreshOtpEvent {
+    }
+
+    private final Handler mHistoryHandler = new Handler(Looper.getMainLooper());
+    private Runnable mHistoryRunnable;
+    private static final int POLLING_INTERVAL_MS = 5000;
+    private String mLatestLogId = null;
+    private boolean mIsFirstPoll = true;
+
+    private void startHistoryPolling() {
+        if (mLock == null || mLock.getId() == null) {
+            return;
+        }
+        mIsFirstPoll = true;
+        mLatestLogId = null;
+        mHistoryRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (getActivity() == null || isDetached() || !isAdded()) {
+                    return;
+                }
+                if (!ServiceManager.getInstance().isNetworkAvailable(getContext())) {
+                    mHistoryHandler.postDelayed(this, POLLING_INTERVAL_MS);
+                    return;
+                }
+                String url = String.format(java.util.Locale.ENGLISH, com.payoda.smartlock.constants.ServiceUrl.GET_HISTORY, mLock.getId(), "5", "0") + "&t=" + System.currentTimeMillis();
+                ServiceManager.getInstance().get(url, null, new ResponseHandler() {
+                    @Override
+                    public void onSuccess(Object data) {
+                        if (getActivity() == null || isDetached() || !isAdded()) {
+                            return;
+                        }
+                        if (data != null) {
+                            try {
+                                 HistoryList historyList = new Gson().fromJson(data.toString(), HistoryList.class);
+                                 if (historyList != null && historyList.getHistory() != null) {
+                                     if (historyList.getHistory().isEmpty()) {
+                                         if (mIsFirstPoll) {
+                                             mLatestLogId = "";
+                                             mIsFirstPoll = false;
+                                             Logger.d(TAG, "First poll. History list is empty. Setting baseline to empty.");
+                                         }
+                                     } else {
+                                         if (mIsFirstPoll) {
+                                             mLatestLogId = historyList.getHistory().get(0).getId();
+                                             mIsFirstPoll = false;
+                                             Logger.d(TAG, "First poll. Baseline log ID: " + mLatestLogId);
+                                             
+                                             History latestLog = historyList.getHistory().get(0);
+                                             String logType = latestLog.getType() != null ? latestLog.getType().trim() : "";
+                                             if (logType.equalsIgnoreCase("F") || logType.equalsIgnoreCase("FP")) {
+                                                 String lastNotifiedId = SecuredStorageManager.getInstance().getLastNotifiedFpLogId();
+                                                 if (latestLog.getId() != null && !latestLog.getId().equals(lastNotifiedId)) {
+                                                     handleNewLogEvent(latestLog);
+                                                 }
+                                             }
+                                         } else {
+                                             ArrayList<History> newLogs = new ArrayList<>();
+                                             for (History log : historyList.getHistory()) {
+                                                 if (log.getId() != null && log.getId().equals(mLatestLogId)) {
+                                                     break;
+                                                 }
+                                                 newLogs.add(log);
+                                             }
+                                             String newestId = historyList.getHistory().get(0).getId();
+                                             if (newestId != null) {
+                                                 mLatestLogId = newestId;
+                                             }
+                                             for (int i = newLogs.size() - 1; i >= 0; i--) {
+                                                 History log = newLogs.get(i);
+                                                 Logger.d(TAG, "New log detected! ID: " + log.getId() + ", Type: " + log.getType());
+                                                 handleNewLogEvent(log);
+                                             }
+                                         }
+                                     }
+                                 }
+                            } catch (Exception e) {
+                                Logger.e(e);
+                            }
+                        }
+                        mHistoryHandler.postDelayed(mHistoryRunnable, POLLING_INTERVAL_MS);
+                    }
+
+                    @Override
+                    public void onAuthError(String message) {
+                        Logger.d(TAG, "History poll Auth Error: " + message);
+                        mHistoryHandler.postDelayed(mHistoryRunnable, POLLING_INTERVAL_MS);
+                    }
+
+                    @Override
+                    public void onError(String message) {
+                        Logger.d(TAG, "History poll Error: " + message);
+                        mHistoryHandler.postDelayed(mHistoryRunnable, POLLING_INTERVAL_MS);
+                    }
+                });
+            }
+        };
+        mHistoryHandler.post(mHistoryRunnable);
+    }
+
+    private void stopHistoryPolling() {
+        if (mHistoryRunnable != null) {
+            mHistoryHandler.removeCallbacks(mHistoryRunnable);
+            mHistoryRunnable = null;
+        }
+    }
+
+    private void handleNewLogEvent(History log) {
+        String logType = log.getType() != null ? log.getType().trim() : "";
+        if (logType.isEmpty()) return;
+
+        if (logType.equalsIgnoreCase("F") || logType.equalsIgnoreCase("FP")) {
+            Logger.d(TAG, "[DEBUG] Fingerprint log detected. Fetching OTP keys.");
+            if (getContext() != null) {
+                Toast.makeText(getContext(), "[DEBUG] Fingerprint event! Fetching OTP...", Toast.LENGTH_SHORT).show();
+            }
+            if (mLock != null && mLock.getId() != null && getContext() != null) {
+                OtpKeyService.getInstance().getOtp(mLock.getId(), "1", new ResponseHandler() {
+                    @Override
+                    public void onSuccess(Object data) {
+                        if (getActivity() == null || isDetached() || !isAdded()) return;
+                        if (data != null) {
+                            try {
+                                Logger.d(TAG, "[DEBUG] getOtp onSuccess payload: " + data.toString());
+                                OtpResponse otpResponse = new Gson().fromJson(data.toString(), OtpResponse.class);
+                                if (otpResponse != null && otpResponse.getOtpData() != null) {
+                                    ArrayList<LockKeys> lockKeysList = otpResponse.getOtpData().getLockKeyList();
+                                    if (lockKeysList != null && !lockKeysList.isEmpty()) {
+                                         LockKeys targetOtpKey = null;
+                                         // Step 1: Scan for an active key that is not yet notified
+                                         for (LockKeys lk : lockKeysList) {
+                                             Logger.d(TAG, "[DEBUG] Key ID: " + lk.getId() + " | Status: " + lk.getStatus() + " | Type: " + lk.getUserType());
+                                             if (lk.getStatus() != null && lk.getStatus().equals("1")) {
+                                                 if (!SecuredStorageManager.getInstance().isOtpIdNotified(lk.getId())) {
+                                                     targetOtpKey = lk;
+                                                     break;
+                                                 }
+                                             }
+                                         }
+                                         
+                                         // Step 2: If target is null, it means a new batch was generated and slot IDs are reused.
+                                         // Clear cache and search again.
+                                         if (targetOtpKey == null) {
+                                             Logger.d(TAG, "[DEBUG] No active non-notified key found. Clearing cache (new batch detected).");
+                                             SecuredStorageManager.getInstance().clearAllNotifiedOtpIds();
+                                             for (LockKeys lk : lockKeysList) {
+                                                 if (lk.getStatus() != null && lk.getStatus().equals("1")) {
+                                                     if (!SecuredStorageManager.getInstance().isOtpIdNotified(lk.getId())) {
+                                                         targetOtpKey = lk;
+                                                         break;
+                                                     }
+                                                 }
+                                             }
+                                         }
+                                         
+                                         if (targetOtpKey != null) {
+                                             String encryptedOtp = targetOtpKey.getKey();
+                                             String decryptedOtp = AESEncryption.getInstance().decrypt(encryptedOtp, true);
+                                             Logger.d(TAG, "[DEBUG] Decrypted OTP: " + decryptedOtp);
+                                             if (getContext() != null) {
+                                                 Toast.makeText(getContext(), "[DEBUG] OTP Decrypted: " + decryptedOtp, Toast.LENGTH_LONG).show();
+                                             }
+                                             SecuredStorageManager.getInstance().addNotifiedOtpId(targetOtpKey.getId());
+                                             SecuredStorageManager.getInstance().setLastNotifiedFpLogId(log.getId());
+                                             showOtpNotification(decryptedOtp);
+                                         } else {
+                                             Logger.d(TAG, "[DEBUG] No active key found even after clearing cache.");
+                                         }
+                                    } else {
+                                         Logger.d(TAG, "[DEBUG] lockKeysList is empty.");
+                                    }
+                                } else {
+                                    Logger.d(TAG, "[DEBUG] OtpResponse or OtpData is null");
+                                }
+                            } catch (Exception e) {
+                                Logger.e(e);
+                                if (getContext() != null) {
+                                    Toast.makeText(getContext(), "[DEBUG] Parse error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                                }
+                            }
+                        }
+                    }
+
+                    @Override
+                    public void onAuthError(String message) {
+                        Logger.d(TAG, "[DEBUG] getOtp onAuthError: " + message);
+                        if (getContext() != null) {
+                            Toast.makeText(getContext(), "[DEBUG] getOtp Auth Error: " + message, Toast.LENGTH_SHORT).show();
+                        }
+                    }
+
+                    @Override
+                    public void onError(String message) {
+                        Logger.d(TAG, "[DEBUG] getOtp onError: " + message);
+                        if (getContext() != null) {
+                            Toast.makeText(getContext(), "[DEBUG] getOtp Error: " + message, Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
+            }
+        } else if (logType.equalsIgnoreCase("O") || logType.equalsIgnoreCase("TO")) {
+            Logger.d(TAG, "[DEBUG] OTP usage log detected. Posting RefreshOtpEvent.");
+            if (getContext() != null) {
+                Toast.makeText(getContext(), "[DEBUG] OTP usage log detected!", Toast.LENGTH_SHORT).show();
+            }
+            EventBus.getDefault().post(new RefreshOtpEvent());
+        }
+    }
+
+    private void showOtpNotification(String otp) {
+        if (getActivity() == null) return;
+        Context context = getContext();
+        if (context == null) return;
+
+        String title = "OTP Notification";
+        String message = "Your OTP is: " + otp;
+
+        AppDialog.showAlertDialog(getActivity(), title, message);
+
+        NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        String channelId = "otp_notification_channel";
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                    channelId,
+                    "OTP Notification Channel",
+                    NotificationManager.IMPORTANCE_HIGH
+            );
+            channel.setDescription("Channel for showing OTP notifications on fingerprint authentication");
+            if (notificationManager != null) {
+                notificationManager.createNotificationChannel(channel);
+            }
+        }
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, channelId)
+                .setSmallIcon(R.mipmap.ic_launcher_nova)
+                .setContentTitle(title)
+                .setContentText(message)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setDefaults(NotificationCompat.DEFAULT_ALL)
+                .setAutoCancel(true);
+
+        if (notificationManager != null) {
+            notificationManager.notify(99, builder.build());
         }
     }
 

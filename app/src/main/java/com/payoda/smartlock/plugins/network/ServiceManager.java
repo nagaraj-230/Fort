@@ -372,6 +372,7 @@ public class ServiceManager {
                         return getAuthHeaders();
                     }
                 };
+                request.setShouldCache(false);
                 addToRequestQueue(request, tag);
             } catch (Exception e) {
                 e.printStackTrace();

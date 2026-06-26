@@ -3,6 +3,17 @@ package com.payoda.smartlock.history;
 import android.app.NotificationManager;
 import android.content.Context;
 import android.os.Bundle;
+import com.google.gson.Gson;
+import com.payoda.smartlock.locks.model.Lock;
+import com.payoda.smartlock.history.model.History;
+import com.payoda.smartlock.history.model.HistoryList;
+import com.payoda.smartlock.managepins.model.OtpResponse;
+import com.payoda.smartlock.managepins.service.OtpKeyService;
+import com.payoda.smartlock.locks.model.LockKeys;
+import com.payoda.smartlock.service.AESEncryption;
+import android.app.NotificationChannel;
+import androidx.core.app.NotificationCompat;
+import java.util.ArrayList;
 import com.google.android.material.tabs.TabLayout;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
@@ -23,6 +34,7 @@ import com.payoda.smartlock.R;
 import com.payoda.smartlock.constants.Constant;
 import com.payoda.smartlock.managepins.TabManagePinsActivity;
 import com.payoda.smartlock.model.RemoteAccessModel;
+import com.payoda.smartlock.plugins.network.ServiceManager;
 import com.payoda.smartlock.plugins.network.ResponseHandler;
 import com.payoda.smartlock.plugins.network.ResponseModel;
 import com.payoda.smartlock.plugins.pushnotification.RemoteDataEvent;
@@ -63,6 +75,12 @@ public class TabHistoryActivity extends AppCompatActivity implements InactiveTim
     private HistoryFragment historyFragment;
     private LockNotificationFragment notificationFragment;
 
+    private final android.os.Handler mHistoryHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private Runnable mHistoryRunnable;
+    private static final int POLLING_INTERVAL_MS = 5000;
+    private String mLatestLogId = null;
+    private boolean mIsFirstPoll = true;
+    private Lock mLock;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -93,14 +111,248 @@ public class TabHistoryActivity extends AppCompatActivity implements InactiveTim
         mViewPager.addOnPageChangeListener(new TabLayout.TabLayoutOnPageChangeListener(tabLayout));
         tabLayout.addOnTabSelectedListener(new TabLayout.ViewPagerOnTabSelectedListener(mViewPager));
         Bundle bundle = getIntent().getExtras();
-        /*if (bundle != null) {
-            Lock mLock = new Gson().fromJson(bundle.getString(Constant.SCREEN_DATA), Lock.class);
-        }*/
+        if (bundle != null) {
+            mLock = new Gson().fromJson(bundle.getString(Constant.SCREEN_DATA), Lock.class);
+        }
         historyFragment = HistoryFragment.getInstance();
         historyFragment.setArguments(bundle);
 
         notificationFragment= LockNotificationFragment.getInstance();
         notificationFragment.setArguments(bundle);
+    }
+
+    private void startHistoryPolling() {
+        if (mLock == null || mLock.getId() == null) {
+            return;
+        }
+        stopHistoryPolling();
+        mIsFirstPoll = true;
+        mLatestLogId = null;
+        mHistoryRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (TabHistoryActivity.this.isFinishing()) {
+                    return;
+                }
+                if (!ServiceManager.getInstance().isNetworkAvailable(TabHistoryActivity.this)) {
+                    mHistoryHandler.postDelayed(this, POLLING_INTERVAL_MS);
+                    return;
+                }
+                String url = String.format(java.util.Locale.ENGLISH, com.payoda.smartlock.constants.ServiceUrl.GET_HISTORY, mLock.getId(), "5", "0") + "&t=" + System.currentTimeMillis();
+                ServiceManager.getInstance().get(url, null, new ResponseHandler() {
+                    @Override
+                    public void onSuccess(Object data) {
+                        if (TabHistoryActivity.this.isFinishing()) {
+                            return;
+                        }
+                        if (data != null) {
+                            try {
+                                HistoryList historyList = new Gson().fromJson(data.toString(), HistoryList.class);
+                                if (historyList != null && historyList.getHistory() != null) {
+                                    if (historyList.getHistory().isEmpty()) {
+                                        if (mIsFirstPoll) {
+                                            mLatestLogId = "";
+                                            mIsFirstPoll = false;
+                                            Logger.d(TAG, "First poll. History list is empty. Setting baseline to empty.");
+                                        }
+                                    } else {
+                                        if (mIsFirstPoll) {
+                                            mLatestLogId = historyList.getHistory().get(0).getId();
+                                            mIsFirstPoll = false;
+                                            Logger.d(TAG, "First poll. Baseline log ID: " + mLatestLogId);
+                                            
+                                            History latestLog = historyList.getHistory().get(0);
+                                            String logType = latestLog.getType() != null ? latestLog.getType().trim() : "";
+                                            if (logType.equalsIgnoreCase("F") || logType.equalsIgnoreCase("FP")) {
+                                                String lastNotifiedId = SecuredStorageManager.getInstance().getLastNotifiedFpLogId();
+                                                if (latestLog.getId() != null && !latestLog.getId().equals(lastNotifiedId)) {
+                                                    handleNewLogEvent(latestLog);
+                                                }
+                                            }
+                                        } else {
+                                             ArrayList<History> newLogs = new ArrayList<>();
+                                             for (History log : historyList.getHistory()) {
+                                                 if (log.getId() != null && log.getId().equals(mLatestLogId)) {
+                                                     break;
+                                                 }
+                                                 newLogs.add(log);
+                                             }
+                                             String newestId = historyList.getHistory().get(0).getId();
+                                             if (newestId != null) {
+                                                 mLatestLogId = newestId;
+                                             }
+                                             
+                                             if (!newLogs.isEmpty()) {
+                                                 if (historyFragment != null) {
+                                                     historyFragment.onNewLogsDetected(newLogs);
+                                                 }
+                                                 if (notificationFragment != null) {
+                                                     notificationFragment.onNewLogsDetected();
+                                                 }
+                                             }
+                                             
+                                             for (int i = newLogs.size() - 1; i >= 0; i--) {
+                                                 History log = newLogs.get(i);
+                                                 Logger.d(TAG, "New log detected! ID: " + log.getId() + ", Type: " + log.getType());
+                                                 handleNewLogEvent(log);
+                                             }
+                                        }
+                                    }
+                                }
+                            } catch (Exception e) {
+                                Logger.e(e);
+                            }
+                        }
+                        mHistoryHandler.postDelayed(mHistoryRunnable, POLLING_INTERVAL_MS);
+                    }
+
+                    @Override
+                    public void onAuthError(String message) {
+                        Logger.d(TAG, "History poll Auth Error: " + message);
+                        mHistoryHandler.postDelayed(mHistoryRunnable, POLLING_INTERVAL_MS);
+                    }
+
+                    @Override
+                    public void onError(String message) {
+                        Logger.d(TAG, "History poll Error: " + message);
+                        mHistoryHandler.postDelayed(mHistoryRunnable, POLLING_INTERVAL_MS);
+                    }
+                });
+            }
+        };
+        mHistoryHandler.post(mHistoryRunnable);
+    }
+
+    private void stopHistoryPolling() {
+        if (mHistoryRunnable != null) {
+            mHistoryHandler.removeCallbacks(mHistoryRunnable);
+            mHistoryRunnable = null;
+        }
+    }
+
+    private void handleNewLogEvent(History log) {
+        String logType = log.getType() != null ? log.getType().trim() : "";
+        if (logType.isEmpty()) return;
+
+        if (logType.equalsIgnoreCase("F") || logType.equalsIgnoreCase("FP")) {
+            Logger.d(TAG, "[DEBUG] Fingerprint log detected. Fetching OTP keys.");
+            Toast.makeText(TabHistoryActivity.this, "[DEBUG] Fingerprint event! Fetching OTP...", Toast.LENGTH_SHORT).show();
+            if (mLock != null && mLock.getId() != null) {
+                OtpKeyService.getInstance().getOtp(mLock.getId(), "1", new ResponseHandler() {
+                    @Override
+                    public void onSuccess(Object data) {
+                        if (TabHistoryActivity.this.isFinishing()) return;
+                        if (data != null) {
+                            try {
+                                Logger.d(TAG, "[DEBUG] getOtp onSuccess payload: " + data.toString());
+                                OtpResponse otpResponse = new Gson().fromJson(data.toString(), OtpResponse.class);
+                                if (otpResponse != null && otpResponse.getOtpData() != null) {
+                                    ArrayList<LockKeys> lockKeysList = otpResponse.getOtpData().getLockKeyList();
+                                    if (lockKeysList != null && !lockKeysList.isEmpty()) {
+                                         LockKeys targetOtpKey = null;
+                                         // Step 1: Scan for an active key that is not yet notified
+                                         for (LockKeys lk : lockKeysList) {
+                                             Logger.d(TAG, "[DEBUG] Key ID: " + lk.getId() + " | Status: " + lk.getStatus() + " | Type: " + lk.getUserType());
+                                             if (lk.getStatus() != null && lk.getStatus().equals("1")) {
+                                                 if (!SecuredStorageManager.getInstance().isOtpIdNotified(lk.getId())) {
+                                                     targetOtpKey = lk;
+                                                     break;
+                                                 }
+                                             }
+                                         }
+                                         
+                                         // Step 2: If target is null, it means a new batch was generated and slot IDs are reused.
+                                         // Clear cache and search again.
+                                         if (targetOtpKey == null) {
+                                             Logger.d(TAG, "[DEBUG] No active non-notified key found. Clearing cache (new batch detected).");
+                                             SecuredStorageManager.getInstance().clearAllNotifiedOtpIds();
+                                             for (LockKeys lk : lockKeysList) {
+                                                 if (lk.getStatus() != null && lk.getStatus().equals("1")) {
+                                                     if (!SecuredStorageManager.getInstance().isOtpIdNotified(lk.getId())) {
+                                                         targetOtpKey = lk;
+                                                         break;
+                                                     }
+                                                 }
+                                             }
+                                         }
+                                         
+                                         if (targetOtpKey != null) {
+                                             String encryptedOtp = targetOtpKey.getKey();
+                                             String decryptedOtp = AESEncryption.getInstance().decrypt(encryptedOtp, true);
+                                             Logger.d(TAG, "[DEBUG] Decrypted OTP: " + decryptedOtp);
+                                             Toast.makeText(TabHistoryActivity.this, "[DEBUG] OTP Decrypted: " + decryptedOtp, Toast.LENGTH_LONG).show();
+                                             SecuredStorageManager.getInstance().addNotifiedOtpId(targetOtpKey.getId());
+                                             SecuredStorageManager.getInstance().setLastNotifiedFpLogId(log.getId());
+                                             showOtpNotification(decryptedOtp);
+                                         } else {
+                                             Logger.d(TAG, "[DEBUG] No active key found even after clearing cache.");
+                                         }
+                                    } else {
+                                         Logger.d(TAG, "[DEBUG] lockKeysList is empty.");
+                                    }
+                                } else {
+                                    Logger.d(TAG, "[DEBUG] OtpResponse or OtpData is null");
+                                }
+                            } catch (Exception e) {
+                                Logger.e(e);
+                                Toast.makeText(TabHistoryActivity.this, "[DEBUG] Parse error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                    }
+
+                    @Override
+                    public void onAuthError(String message) {
+                        Logger.d(TAG, "[DEBUG] getOtp onAuthError: " + message);
+                        Toast.makeText(TabHistoryActivity.this, "[DEBUG] getOtp Auth Error: " + message, Toast.LENGTH_SHORT).show();
+                    }
+
+                    @Override
+                    public void onError(String message) {
+                        Logger.d(TAG, "[DEBUG] getOtp onError: " + message);
+                        Toast.makeText(TabHistoryActivity.this, "[DEBUG] getOtp Error: " + message, Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }
+        } else if (logType.equalsIgnoreCase("O") || logType.equalsIgnoreCase("TO")) {
+            Logger.d(TAG, "[DEBUG] OTP usage log detected. Posting RefreshOtpEvent.");
+            Toast.makeText(TabHistoryActivity.this, "[DEBUG] OTP usage log detected!", Toast.LENGTH_SHORT).show();
+            EventBus.getDefault().post(new com.payoda.smartlock.locks.LockDetailFragment.RefreshOtpEvent());
+        }
+    }
+
+    private void showOtpNotification(String otp) {
+        if (TabHistoryActivity.this.isFinishing()) return;
+
+        String title = "OTP Notification";
+        String message = "Your OTP is: " + otp;
+
+        AppDialog.showAlertDialog(TabHistoryActivity.this, title, message);
+
+        NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        String channelId = "otp_notification_channel";
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                    channelId,
+                    "OTP Notification Channel",
+                    NotificationManager.IMPORTANCE_HIGH
+            );
+            channel.setDescription("Channel for showing OTP notifications on fingerprint authentication");
+            if (notificationManager != null) {
+                notificationManager.createNotificationChannel(channel);
+            }
+        }
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(TabHistoryActivity.this, channelId)
+                .setSmallIcon(R.mipmap.ic_launcher_nova)
+                .setContentTitle(title)
+                .setContentText(message)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setDefaults(NotificationCompat.DEFAULT_ALL)
+                .setAutoCancel(true);
+
+        if (notificationManager != null) {
+            notificationManager.notify(99, builder.build());
+        }
     }
 
 
@@ -169,6 +421,7 @@ public class TabHistoryActivity extends AppCompatActivity implements InactiveTim
         SyncScheduler.getInstance().schedule(TabHistoryActivity.this, Constant.JOBS.ALL);
         validateTimeout();
         InactiveTimeoutUtil.startTimer(TabHistoryActivity.this, TabHistoryActivity.this);
+        startHistoryPolling();
     }
 
     @Override
@@ -186,6 +439,7 @@ public class TabHistoryActivity extends AppCompatActivity implements InactiveTim
 
     @Override
     protected void onPause() {
+        stopHistoryPolling();
         super.onPause();
         if (AppDialog.alertDialog != null && AppDialog.alertDialog.isShowing()) {
             AppDialog.alertDialog.dismiss();

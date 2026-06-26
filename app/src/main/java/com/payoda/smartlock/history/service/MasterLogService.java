@@ -73,8 +73,9 @@ public class MasterLogService {
 
     public void serviceNotificationRequest(String id,int limit,int offset,ResponseHandler handler) {
         this.responseHandler = handler;
-        ServiceManager.getInstance().get(String.format(Locale.ENGLISH,ServiceUrl.GET_LOCK_NOTIFICATION,id,String.valueOf(limit),
-                String.valueOf(offset)), null, this.notificationHandler);
+        String url = String.format(Locale.ENGLISH,ServiceUrl.GET_LOCK_NOTIFICATION,id,String.valueOf(limit),
+                String.valueOf(offset)) + "&t=" + System.currentTimeMillis();
+        ServiceManager.getInstance().get(url, null, this.notificationHandler);
     }
 
 }

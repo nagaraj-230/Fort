@@ -313,24 +313,38 @@ android {
             versionCode 14
             versionName "1.2.2"
             buildConfigField("String", "APPCENTER_KEY", "\"1ec2d533-08b7-49ff-8742-d251f5c468eb\"")
-            //buildConfigField("String", "BASE_URL", "\"http://fortlive.co.in\"") // staging
-            //buildConfigField("String", "BASE_URL", "\"http://fortstaging.co.in\"")
             buildConfigField("String", "BASE_URL", "\"http://fortexclusivelive.com\"")
-            //buildConfigField("String", "BASE_URL", "\"http://fortexclusivestaging.com\"")
             buildConfigField("String", "TERMS_CONDITION_URL", "\"https://www.astrixengineering.com/terms-conditions/\"")
             buildConfigField("String", "PRIVACY_URL", "\"https://www.astrixengineering.com/privacy-policy/\"")
             buildConfigField("boolean", "APP_VERSION_VISIBILITY", "false")
             buildConfigField("boolean", "BATTERY_LEVEL_VISIBILITY", "false")
             buildConfigField("int", "SCRATCH_CODE_LENGTH", "10")
             buildConfigField("String", "SCRATCH_CODE_PREFIX", "\"F0\"")
-            // TODO remove this before live
-            //buildConfigField("boolean", "FACTORY_RESET_VISIBILITY", "true")
-            // TODO enable this before live
-            buildConfigField("boolean", "FACTORY_RESET_VISIBILITY", "false")
+            buildConfigField("boolean", "FACTORY_RESET_VISIBILITY", "true")
             buildConfigField("String", "PLAYSTORE_URL", "\"https://play.google.com/store/apps/details?id=com.astrixengineering.ax100\"")
             buildConfigField("String", "MANUFACTURER_CODE", "\"FORT_\"")
             buildConfigField("String", "BUILD_VARIANT", "\"P\"")
             resValue "string", "app_name", "NOVA"
+        }
+
+        novaStaging {
+            dimension "tier"
+            applicationId "com.tbi.fort.nova.locks"
+            versionCode 14
+            versionName "1.2.2"
+            buildConfigField("String", "APPCENTER_KEY", "\"1ec2d533-08b7-49ff-8742-d251f5c468eb\"")
+            buildConfigField("String", "BASE_URL", "\"http://fortexclusivestaging.com\"")
+            buildConfigField("String", "TERMS_CONDITION_URL", "\"https://www.astrixengineering.com/terms-conditions/\"")
+            buildConfigField("String", "PRIVACY_URL", "\"https://www.astrixengineering.com/privacy-policy/\"")
+            buildConfigField("boolean", "APP_VERSION_VISIBILITY", "false")
+            buildConfigField("boolean", "BATTERY_LEVEL_VISIBILITY", "false")
+            buildConfigField("int", "SCRATCH_CODE_LENGTH", "10")
+            buildConfigField("String", "SCRATCH_CODE_PREFIX", "\"F0\"")
+            buildConfigField("boolean", "FACTORY_RESET_VISIBILITY", "true")
+            buildConfigField("String", "PLAYSTORE_URL", "\"https://play.google.com/store/apps/details?id=com.astrixengineering.ax100\"")
+            buildConfigField("String", "MANUFACTURER_CODE", "\"FORT_\"")
+            buildConfigField("String", "BUILD_VARIANT", "\"P\"")
+            resValue "string", "app_name", "NOVA Staging"
         }
     }
 

@@ -19,6 +19,20 @@ import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.content.Context;
+import android.os.Build;
+import android.widget.Toast;
+import androidx.core.app.NotificationCompat;
+import com.payoda.smartlock.managepins.service.OtpKeyService;
+import com.payoda.smartlock.managepins.model.OtpResponse;
+import com.payoda.smartlock.locks.model.LockKeys;
+import com.payoda.smartlock.service.AESEncryption;
+import org.greenrobot.eventbus.EventBus;
+import com.payoda.smartlock.locks.LockDetailFragment.RefreshOtpEvent;
+import com.payoda.smartlock.history.model.History;
+import java.util.ArrayList;
 
 import com.google.gson.Gson;
 import com.payoda.smartlock.R;
@@ -79,7 +93,11 @@ public class HistoryFragment extends Fragment implements SwipeRefreshLayout.OnRe
     @Override
     public void onResume() {
         super.onResume();
+    }
 
+    @Override
+    public void onPause() {
+        super.onPause();
     }
 
     private boolean loading = false;
@@ -258,4 +276,20 @@ public class HistoryFragment extends Fragment implements SwipeRefreshLayout.OnRe
         }
     }
 
+    public void onNewLogsDetected(ArrayList<History> newLogs) {
+        if (newLogs == null || newLogs.isEmpty()) return;
+        if (getActivity() == null || isDetached() || !isAdded()) return;
+
+        ArrayList<History> list = mHistoryAdapter.getItemList();
+        if (list == null) {
+            list = new ArrayList<>();
+            mHistoryAdapter.setItemList(list);
+        }
+        for (int i = newLogs.size() - 1; i >= 0; i--) {
+            History log = newLogs.get(i);
+            list.add(0, log);
+            mHistoryAdapter.notifyItemInserted(0);
+        }
+        tvNoHistory.setVisibility(View.GONE);
+    }
 }

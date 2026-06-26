@@ -236,4 +236,8 @@ public class LockNotificationFragment extends Fragment implements SwipeRefreshLa
         }
     }
 
+    public void onNewLogsDetected() {
+        if (getActivity() == null || isDetached() || !isAdded()) return;
+        doRequestList(true);
+    }
 }
