@@ -94,7 +94,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
         NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(
                 this,getString(R.string.notification_channel_id))
-                .setSmallIcon(R.mipmap.ic_launcher_nova)
+                .setSmallIcon(R.mipmap.ic_launcher)
               //  .setLargeIcon(BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher)) // This icon will appear in the expanded notification view.
                 .setContentTitle(title)
                 .setContentText(messageBody)

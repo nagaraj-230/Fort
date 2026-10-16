@@ -235,8 +235,7 @@ public class TabHistoryActivity extends AppCompatActivity implements InactiveTim
         if (logType.isEmpty()) return;
 
         if (logType.equalsIgnoreCase("F") || logType.equalsIgnoreCase("FP")) {
-            Logger.d(TAG, "[DEBUG] Fingerprint log detected. Fetching OTP keys.");
-            Toast.makeText(TabHistoryActivity.this, "[DEBUG] Fingerprint event! Fetching OTP...", Toast.LENGTH_SHORT).show();
+            Logger.d(TAG, "Fingerprint log detected. Fetching OTP keys.");
             if (mLock != null && mLock.getId() != null) {
                 OtpKeyService.getInstance().getOtp(mLock.getId(), "1", new ResponseHandler() {
                     @Override
@@ -244,7 +243,7 @@ public class TabHistoryActivity extends AppCompatActivity implements InactiveTim
                         if (TabHistoryActivity.this.isFinishing()) return;
                         if (data != null) {
                             try {
-                                Logger.d(TAG, "[DEBUG] getOtp onSuccess payload: " + data.toString());
+                                Logger.d(TAG, "getOtp onSuccess payload: " + data.toString());
                                 OtpResponse otpResponse = new Gson().fromJson(data.toString(), OtpResponse.class);
                                 if (otpResponse != null && otpResponse.getOtpData() != null) {
                                     ArrayList<LockKeys> lockKeysList = otpResponse.getOtpData().getLockKeyList();
@@ -252,7 +251,7 @@ public class TabHistoryActivity extends AppCompatActivity implements InactiveTim
                                          LockKeys targetOtpKey = null;
                                          // Step 1: Scan for an active key that is not yet notified
                                          for (LockKeys lk : lockKeysList) {
-                                             Logger.d(TAG, "[DEBUG] Key ID: " + lk.getId() + " | Status: " + lk.getStatus() + " | Type: " + lk.getUserType());
+                                             Logger.d(TAG, "Key ID: " + lk.getId() + " | Status: " + lk.getStatus() + " | Type: " + lk.getUserType());
                                              if (lk.getStatus() != null && lk.getStatus().equals("1")) {
                                                  if (!SecuredStorageManager.getInstance().isOtpIdNotified(lk.getId())) {
                                                      targetOtpKey = lk;
@@ -264,7 +263,7 @@ public class TabHistoryActivity extends AppCompatActivity implements InactiveTim
                                          // Step 2: If target is null, it means a new batch was generated and slot IDs are reused.
                                          // Clear cache and search again.
                                          if (targetOtpKey == null) {
-                                             Logger.d(TAG, "[DEBUG] No active non-notified key found. Clearing cache (new batch detected).");
+                                             Logger.d(TAG, "No active non-notified key found. Clearing cache (new batch detected).");
                                              SecuredStorageManager.getInstance().clearAllNotifiedOtpIds();
                                              for (LockKeys lk : lockKeysList) {
                                                  if (lk.getStatus() != null && lk.getStatus().equals("1")) {
@@ -279,43 +278,38 @@ public class TabHistoryActivity extends AppCompatActivity implements InactiveTim
                                          if (targetOtpKey != null) {
                                              String encryptedOtp = targetOtpKey.getKey();
                                              String decryptedOtp = AESEncryption.getInstance().decrypt(encryptedOtp, true);
-                                             Logger.d(TAG, "[DEBUG] Decrypted OTP: " + decryptedOtp);
-                                             Toast.makeText(TabHistoryActivity.this, "[DEBUG] OTP Decrypted: " + decryptedOtp, Toast.LENGTH_LONG).show();
+                                             Logger.d(TAG, "Decrypted OTP: " + decryptedOtp);
                                              SecuredStorageManager.getInstance().addNotifiedOtpId(targetOtpKey.getId());
                                              SecuredStorageManager.getInstance().setLastNotifiedFpLogId(log.getId());
                                              showOtpNotification(decryptedOtp);
                                          } else {
-                                             Logger.d(TAG, "[DEBUG] No active key found even after clearing cache.");
+                                             Logger.d(TAG, "No active key found even after clearing cache.");
                                          }
                                     } else {
-                                         Logger.d(TAG, "[DEBUG] lockKeysList is empty.");
+                                         Logger.d(TAG, "lockKeysList is empty.");
                                     }
                                 } else {
-                                    Logger.d(TAG, "[DEBUG] OtpResponse or OtpData is null");
+                                    Logger.d(TAG, "OtpResponse or OtpData is null");
                                 }
                             } catch (Exception e) {
                                 Logger.e(e);
-                                Toast.makeText(TabHistoryActivity.this, "[DEBUG] Parse error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                             }
                         }
                     }
 
                     @Override
                     public void onAuthError(String message) {
-                        Logger.d(TAG, "[DEBUG] getOtp onAuthError: " + message);
-                        Toast.makeText(TabHistoryActivity.this, "[DEBUG] getOtp Auth Error: " + message, Toast.LENGTH_SHORT).show();
+                        Logger.d(TAG, "getOtp onAuthError: " + message);
                     }
 
                     @Override
                     public void onError(String message) {
-                        Logger.d(TAG, "[DEBUG] getOtp onError: " + message);
-                        Toast.makeText(TabHistoryActivity.this, "[DEBUG] getOtp Error: " + message, Toast.LENGTH_SHORT).show();
+                        Logger.d(TAG, "getOtp onError: " + message);
                     }
                 });
             }
         } else if (logType.equalsIgnoreCase("O") || logType.equalsIgnoreCase("TO")) {
-            Logger.d(TAG, "[DEBUG] OTP usage log detected. Posting RefreshOtpEvent.");
-            Toast.makeText(TabHistoryActivity.this, "[DEBUG] OTP usage log detected!", Toast.LENGTH_SHORT).show();
+            Logger.d(TAG, "OTP usage log detected. Posting RefreshOtpEvent.");
             EventBus.getDefault().post(new com.payoda.smartlock.locks.LockDetailFragment.RefreshOtpEvent());
         }
     }
@@ -343,7 +337,7 @@ public class TabHistoryActivity extends AppCompatActivity implements InactiveTim
         }
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(TabHistoryActivity.this, channelId)
-                .setSmallIcon(R.mipmap.ic_launcher_nova)
+                .setSmallIcon(R.mipmap.ic_launcher)
                 .setContentTitle(title)
                 .setContentText(message)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)

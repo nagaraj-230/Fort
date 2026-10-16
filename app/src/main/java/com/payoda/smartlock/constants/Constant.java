@@ -116,7 +116,10 @@ public class Constant {
         RFID_LIST,
         RFID_ADD,
         RFID_SUCCESS,
-        USER_LIST
+        USER_LIST,
+        SENSOR_ADD,
+        SENSOR_DETAILS,
+        SENSOR_LIST
     }
 
     public enum JOBS {

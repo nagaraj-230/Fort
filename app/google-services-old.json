@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "962986413266",
+    "project_id": "nova-97266",
+    "storage_bucket": "nova-97266.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:962986413266:android:85e7db90654a89b379310b",
+        "android_client_info": {
+          "package_name": "com.tbi.fort.nova.locks"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBo0-_b5x9RLpG87TJyHuNrniq09vecrb4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -72,6 +72,7 @@ import com.payoda.smartlock.constants.ServiceUrl;
 import com.payoda.smartlock.fp.model.FingerPrints;
 import com.payoda.smartlock.history.model.DeviceLog;
 import com.payoda.smartlock.locks.LockListFragment;
+import com.payoda.smartlock.sensors.SensorListFragment;
 import com.payoda.smartlock.locks.model.Lock;
 import com.payoda.smartlock.locks.model.LockKeyList;
 import com.payoda.smartlock.managepins.model.OtpRequest;
@@ -536,6 +537,7 @@ public class NavigationActivity extends AppCompatActivity
     private void initTabItems() {
         tabItems = new ArrayList<>();
         tabItems.add(new MenuItems(LockListFragment.getInstance(), "Locks", R.drawable.ic_lock_selector));
+        tabItems.add(new MenuItems(SensorListFragment.getInstance(), "Sensors", R.drawable.ic_sensor_selector, 0));
         tabItems.add(new MenuItems(NotificationFragment.getInstance(), "Notification", R.drawable.ic_notification_selector, 0));
         tabItems.add(new MenuItems(RequestFragment.getInstance(), "Request", R.drawable.ic_user_selector, 0));
     }

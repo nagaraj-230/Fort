@@ -9,6 +9,13 @@
     <string name="reset_pin">Reset PIN</string>
 
     <string name="locks">Locks</string>
+    <string name="sensors">Sensors</string>
+    <string name="no_sensors_added">No Sensors Added</string>
+    <string name="add_sensor">Add Sensor</string>
+    <string name="sensor_name">Sensor Name</string>
+    <string name="sensor_code">Sensor Code</string>
+    <string name="sensor_details">Sensor Details</string>
+    <string name="sensor_battery">Sensor Battery</string>
     <string name="notification">Notification</string>
     <string name="users">Users</string>
     <string name="welcome">Welcome!</string>

@@ -114,7 +114,7 @@ public class MyFirebaseMessagingButtonsService extends FirebaseMessagingService 
         }
 
         NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, "Notification")
-                .setSmallIcon(R.mipmap.ic_launcher_nova)
+                .setSmallIcon(R.mipmap.ic_launcher)
                 .setContentTitle(title)
                 .setContentText(messageBody)
                 .setSound(defaultSoundUri)

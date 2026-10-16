@@ -1,21 +1,21 @@
 {
   "project_info": {
-    "project_number": "962986413266",
-    "project_id": "nova-97266",
-    "storage_bucket": "nova-97266.firebasestorage.app"
+    "project_number": "453425955832",
+    "project_id": "pinaka-fort-app",
+    "storage_bucket": "pinaka-fort-app.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:962986413266:android:85e7db90654a89b379310b",
+        "mobilesdk_app_id": "1:453425955832:android:f4a4ab464f102311438c0d",
         "android_client_info": {
-          "package_name": "com.tbi.fort.nova.locks"
+          "package_name": "com.pinaka.fort.locks"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyBo0-_b5x9RLpG87TJyHuNrniq09vecrb4"
+          "current_key": "AIzaSyB3rPD-CgMM56hs21ewfPSKrOMfMQSrfy4"
         }
       ],
       "services": {

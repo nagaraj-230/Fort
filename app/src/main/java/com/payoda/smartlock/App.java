@@ -39,6 +39,9 @@ import com.payoda.smartlock.signup.PrivacyPolicyFragment;
 import com.payoda.smartlock.signup.SignUpFragment;
 import com.payoda.smartlock.signup.SuccessfullyRegisteredFragment;
 import com.payoda.smartlock.signup.TermAndCondFragment;
+import com.payoda.smartlock.sensors.SensorAddFragment;
+import com.payoda.smartlock.sensors.SensorDetailFragment;
+import com.payoda.smartlock.sensors.SensorListFragment;
 import com.payoda.smartlock.timeoutpin.TimeOutPinFragment;
 import com.payoda.smartlock.transfer.TransferOwnerFragment;
 import com.payoda.smartlock.users.AssignUsersFragment;
@@ -265,6 +268,15 @@ public class App extends Application {
                 break;
             case RFID_SUCCESS:
                 mFragment= RFIDSuccessFragment.getInstance();
+                break;
+            case SENSOR_ADD:
+                mFragment = SensorAddFragment.getInstance();
+                break;
+            case SENSOR_DETAILS:
+                mFragment = SensorDetailFragment.getInstance();
+                break;
+            case SENSOR_LIST:
+                mFragment = SensorListFragment.getInstance();
                 break;
             default:
                 mFragment = null;

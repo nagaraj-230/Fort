@@ -23,6 +23,8 @@ import com.payoda.smartlock.managepins.model.PinRequest;
 import com.payoda.smartlock.model.LockVersionConfig;
 import com.payoda.smartlock.plugins.network.ServiceManager;
 import com.payoda.smartlock.plugins.pushnotification.RemoteDataEvent;
+import com.payoda.smartlock.sensors.model.Sensor;
+import com.payoda.smartlock.sensors.model.Sensors;
 import com.payoda.smartlock.splash.model.BrandInfoResponse;
 import com.payoda.smartlock.users.model.RequestUser;
 import com.payoda.smartlock.users.model.RevokeUserList;
@@ -840,6 +842,42 @@ public class SecuredStorageManager {
 
     public void setWifiConfigState(String wifiMqttConnection) {
         putString(WIFI, wifiMqttConnection);
+    }
+
+    // Sensor Storage Methods
+    public ArrayList<Sensor> getSensorList() {
+        String json = getString("sensors", "");
+        if (!TextUtils.isEmpty(json)) {
+            Sensors sensors = new Gson().fromJson(json, Sensors.class);
+            if (sensors != null && sensors.getSensorList() != null) {
+                return sensors.getSensorList();
+            }
+        }
+        return new ArrayList<>();
+    }
+
+    public void saveSensorList(ArrayList<Sensor> sensorList) {
+        Sensors sensors = new Sensors();
+        sensors.setStatus("success");
+        sensors.setSensorList(sensorList != null ? sensorList : new ArrayList<>());
+        putString("sensors", new Gson().toJson(sensors));
+    }
+
+    public void addSensor(Sensor sensor) {
+        if (sensor == null) return;
+        ArrayList<Sensor> list = getSensorList();
+        boolean found = false;
+        for (int i = 0; i < list.size(); i++) {
+            if (list.get(i).getId() != null && list.get(i).getId().equalsIgnoreCase(sensor.getId())) {
+                list.set(i, sensor);
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            list.add(sensor);
+        }
+        saveSensorList(list);
     }
 
 }

@@ -99,7 +99,7 @@ public class LockDetailFragment extends BaseFragment {
     private EditText etDoorTitle;
     private TextView tvDoorTitle, tvEngageLock;
     private ImageView ivEdit, ivSave, iv_engage, ivSettings;
-    private LinearLayout llUserHistoryV3;
+    private LinearLayout llUserHistoryV3, llLockContainer;
     private Button btnUser, btnHistory, btnFP, btnRFID, btnManagePin, btnHistoryV3;
     public static Lock mLock;
     private TextInputLayout doorTitleWrapper;
@@ -244,6 +244,7 @@ public class LockDetailFragment extends BaseFragment {
 
 
         iv_engage = view.findViewById(R.id.iv_engage);
+        llLockContainer = view.findViewById(R.id.ll_lock_container);
         btnUser = view.findViewById(R.id.btn_user);
         btnHistory = view.findViewById(R.id.btn_history);
         btnFP = view.findViewById(R.id.btn_fp);
@@ -1020,36 +1021,50 @@ public class LockDetailFragment extends BaseFragment {
 
             if (strStatus.equalsIgnoreCase(Constant.TRANSFER)) {
 
-                Logger.d("### LockDetailFrag UpdateUI 1 ");
+                Logger.d("### LockDetailFrag UpdateUI 1 (Pre-engagement) ");
 
+                // Before first engagement: Show engage button container and notice
                 tvEngageToProceed.setVisibility(View.VISIBLE);
+                if (llLockContainer != null) {
+                    llLockContainer.setVisibility(View.VISIBLE);
+                }
                 switchPassageMode.setVisibility(View.GONE);
-
-
-            } else if (mLock.isOffline()) {
-
-                Logger.d("### LockDetailFrag UpdateUI 2 ");
-
-                tvEngageToProceed.setVisibility(View.GONE);
-                btnHistory.setVisibility(View.VISIBLE);
-                btnFP.setVisibility(View.VISIBLE);
-                btnManagePin.setVisibility(View.VISIBLE);
                 btnUser.setVisibility(View.GONE);
                 btnRFID.setVisibility(View.GONE);
-                llUserHistoryV3.setVisibility(View.GONE);
-                updateBattery();
-                tvBattery.setVisibility(View.VISIBLE);
-                lblBatteryLabel.setVisibility(View.VISIBLE);
+                btnFP.setVisibility(View.GONE);
+                btnManagePin.setVisibility(View.GONE);
+                btnHistory.setVisibility(View.GONE);
+                tvBattery.setVisibility(View.GONE);
+                lblBatteryLabel.setVisibility(View.GONE);
 
             } else {
 
-                Logger.d("### LockDetailFrag UpdateUI 3 ");
+                Logger.d("### LockDetailFrag UpdateUI 2 (Post-engagement) ");
+
+                // After first engagement: Hide Engage Lock, Passage Mode, Users, RFID
+                if (llLockContainer != null) {
+                    llLockContainer.setVisibility(View.GONE);
+                }
+                tvEngageToProceed.setVisibility(View.GONE);
+                switchPassageMode.setVisibility(View.GONE);
+                btnUser.setVisibility(View.GONE);
+                btnRFID.setVisibility(View.GONE);
+
+                // Show Fingerprint, History, OTP, Battery Level, Wi-Fi Configuration
+                btnFP.setVisibility(View.VISIBLE);
+                btnHistory.setVisibility(View.VISIBLE);
+                btnManagePin.setVisibility(View.VISIBLE);
+                btnManagePin.setText(getString(R.string.otp_keys_txt));
+                btnManagePin.setCompoundDrawablesWithIntrinsicBounds(0, R.mipmap.ic_log_otp, 0, 0);
+
                 updateBattery();
                 tvBattery.setVisibility(View.VISIBLE);
                 lblBatteryLabel.setVisibility(View.VISIBLE);
 
-                String mLockUserType = Constant.USER;
+                llUserHistoryV3.setVisibility(View.GONE);
+                tvFactoryReset.setVisibility(View.GONE);
 
+                String mLockUserType = Constant.USER;
                 for (LockKeys lockKeys : mLock.getLockKeys()) {
                     if (!lockKeys.getUserType().equalsIgnoreCase(Constant.OWNER_ID)) {
                         mLockUserType = lockKeys.getUserType();
@@ -1059,16 +1074,10 @@ public class LockDetailFragment extends BaseFragment {
 
                 if (mLockUserType.equalsIgnoreCase(Constant.OWNER)) {
                     ivEdit.setVisibility(View.VISIBLE);
+                    ivSettings.setVisibility(View.VISIBLE);
+                } else {
+                    ivSettings.setVisibility(View.GONE);
                 }
-
-                btnFP.setVisibility(View.VISIBLE);
-                btnManagePin.setVisibility(View.VISIBLE);
-                btnHistory.setVisibility(View.VISIBLE);
-                btnUser.setVisibility(View.GONE);
-                btnRFID.setVisibility(View.GONE);
-                llUserHistoryV3.setVisibility(View.GONE);
-                tvFactoryReset.setVisibility(View.GONE);
-                tvEngageToProceed.setVisibility(View.GONE);
 
                 if (mLock.getLockVersion() != null && (mLock.getLockVersion().equalsIgnoreCase(HW_VERSION_6_0))) {
                     updatePassageModeButtonAndWifiConfig();
@@ -1138,8 +1147,8 @@ public class LockDetailFragment extends BaseFragment {
                 || mLock.getLockVersion().equalsIgnoreCase(HW_VERSION_6_0)
 
         )) {
-            // TODO v6.0
-            btnRFID.setVisibility(View.VISIBLE);
+            // FORT: Hide RFID, Show FP
+            btnRFID.setVisibility(View.GONE);
             btnFP.setVisibility(View.VISIBLE);
         }
     }
@@ -1719,10 +1728,7 @@ public class LockDetailFragment extends BaseFragment {
         if (logType.isEmpty()) return;
 
         if (logType.equalsIgnoreCase("F") || logType.equalsIgnoreCase("FP")) {
-            Logger.d(TAG, "[DEBUG] Fingerprint log detected. Fetching OTP keys.");
-            if (getContext() != null) {
-                Toast.makeText(getContext(), "[DEBUG] Fingerprint event! Fetching OTP...", Toast.LENGTH_SHORT).show();
-            }
+            Logger.d(TAG, "Fingerprint log detected. Fetching OTP keys.");
             if (mLock != null && mLock.getId() != null && getContext() != null) {
                 OtpKeyService.getInstance().getOtp(mLock.getId(), "1", new ResponseHandler() {
                     @Override
@@ -1730,7 +1736,7 @@ public class LockDetailFragment extends BaseFragment {
                         if (getActivity() == null || isDetached() || !isAdded()) return;
                         if (data != null) {
                             try {
-                                Logger.d(TAG, "[DEBUG] getOtp onSuccess payload: " + data.toString());
+                                Logger.d(TAG, "getOtp onSuccess payload: " + data.toString());
                                 OtpResponse otpResponse = new Gson().fromJson(data.toString(), OtpResponse.class);
                                 if (otpResponse != null && otpResponse.getOtpData() != null) {
                                     ArrayList<LockKeys> lockKeysList = otpResponse.getOtpData().getLockKeyList();
@@ -1738,7 +1744,7 @@ public class LockDetailFragment extends BaseFragment {
                                          LockKeys targetOtpKey = null;
                                          // Step 1: Scan for an active key that is not yet notified
                                          for (LockKeys lk : lockKeysList) {
-                                             Logger.d(TAG, "[DEBUG] Key ID: " + lk.getId() + " | Status: " + lk.getStatus() + " | Type: " + lk.getUserType());
+                                             Logger.d(TAG, "Key ID: " + lk.getId() + " | Status: " + lk.getStatus() + " | Type: " + lk.getUserType());
                                              if (lk.getStatus() != null && lk.getStatus().equals("1")) {
                                                  if (!SecuredStorageManager.getInstance().isOtpIdNotified(lk.getId())) {
                                                      targetOtpKey = lk;
@@ -1750,7 +1756,7 @@ public class LockDetailFragment extends BaseFragment {
                                          // Step 2: If target is null, it means a new batch was generated and slot IDs are reused.
                                          // Clear cache and search again.
                                          if (targetOtpKey == null) {
-                                             Logger.d(TAG, "[DEBUG] No active non-notified key found. Clearing cache (new batch detected).");
+                                             Logger.d(TAG, "No active non-notified key found. Clearing cache (new batch detected).");
                                              SecuredStorageManager.getInstance().clearAllNotifiedOtpIds();
                                              for (LockKeys lk : lockKeysList) {
                                                  if (lk.getStatus() != null && lk.getStatus().equals("1")) {
@@ -1765,53 +1771,38 @@ public class LockDetailFragment extends BaseFragment {
                                          if (targetOtpKey != null) {
                                              String encryptedOtp = targetOtpKey.getKey();
                                              String decryptedOtp = AESEncryption.getInstance().decrypt(encryptedOtp, true);
-                                             Logger.d(TAG, "[DEBUG] Decrypted OTP: " + decryptedOtp);
-                                             if (getContext() != null) {
-                                                 Toast.makeText(getContext(), "[DEBUG] OTP Decrypted: " + decryptedOtp, Toast.LENGTH_LONG).show();
-                                             }
+                                             Logger.d(TAG, "Decrypted OTP: " + decryptedOtp);
                                              SecuredStorageManager.getInstance().addNotifiedOtpId(targetOtpKey.getId());
                                              SecuredStorageManager.getInstance().setLastNotifiedFpLogId(log.getId());
                                              showOtpNotification(decryptedOtp);
                                          } else {
-                                             Logger.d(TAG, "[DEBUG] No active key found even after clearing cache.");
+                                             Logger.d(TAG, "No active key found even after clearing cache.");
                                          }
                                     } else {
-                                         Logger.d(TAG, "[DEBUG] lockKeysList is empty.");
+                                         Logger.d(TAG, "lockKeysList is empty.");
                                     }
                                 } else {
-                                    Logger.d(TAG, "[DEBUG] OtpResponse or OtpData is null");
+                                    Logger.d(TAG, "OtpResponse or OtpData is null");
                                 }
                             } catch (Exception e) {
                                 Logger.e(e);
-                                if (getContext() != null) {
-                                    Toast.makeText(getContext(), "[DEBUG] Parse error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                                }
                             }
                         }
                     }
 
                     @Override
                     public void onAuthError(String message) {
-                        Logger.d(TAG, "[DEBUG] getOtp onAuthError: " + message);
-                        if (getContext() != null) {
-                            Toast.makeText(getContext(), "[DEBUG] getOtp Auth Error: " + message, Toast.LENGTH_SHORT).show();
-                        }
+                        Logger.d(TAG, "getOtp onAuthError: " + message);
                     }
 
                     @Override
                     public void onError(String message) {
-                        Logger.d(TAG, "[DEBUG] getOtp onError: " + message);
-                        if (getContext() != null) {
-                            Toast.makeText(getContext(), "[DEBUG] getOtp Error: " + message, Toast.LENGTH_SHORT).show();
-                        }
+                        Logger.d(TAG, "getOtp onError: " + message);
                     }
                 });
             }
         } else if (logType.equalsIgnoreCase("O") || logType.equalsIgnoreCase("TO")) {
-            Logger.d(TAG, "[DEBUG] OTP usage log detected. Posting RefreshOtpEvent.");
-            if (getContext() != null) {
-                Toast.makeText(getContext(), "[DEBUG] OTP usage log detected!", Toast.LENGTH_SHORT).show();
-            }
+            Logger.d(TAG, "OTP usage log detected. Posting RefreshOtpEvent.");
             EventBus.getDefault().post(new RefreshOtpEvent());
         }
     }
@@ -1841,7 +1832,7 @@ public class LockDetailFragment extends BaseFragment {
         }
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, channelId)
-                .setSmallIcon(R.mipmap.ic_launcher_nova)
+                .setSmallIcon(R.mipmap.ic_launcher)
                 .setContentTitle(title)
                 .setContentText(message)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
