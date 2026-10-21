@@ -50,16 +50,57 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             String title = remoteMessage.getData().get(Constant.TITLE);
             String body = remoteMessage.getData().get(Constant.BODY);
             String command = remoteMessage.getData().get(Constant.COMMAND);
-            RemoteDataEvent remoteDataEvent = new RemoteDataEvent(status,title,body, command);
+
+            // Check if OTP is sent directly as a key
+            String otp = remoteMessage.getData().get("otp");
+            if (otp == null || otp.isEmpty()) {
+                otp = remoteMessage.getData().get("OTP");
+            }
+            if (otp != null && !otp.isEmpty()) {
+                if (title == null || title.isEmpty()) {
+                    title = "OTP Notification";
+                }
+                if (body == null || body.isEmpty()) {
+                    body = "Your OTP is: " + otp;
+                }
+                if (command == null || command.isEmpty()) {
+                    command = "OTP_NOTIFICATION";
+                }
+                if (status == null || status.isEmpty()) {
+                    status = Constant.SUCCESS;
+                }
+            }
+
+            // Fallback: If title or body still null, check notification payload
+            if (remoteMessage.getNotification() != null) {
+                if (title == null || title.isEmpty()) {
+                    title = remoteMessage.getNotification().getTitle();
+                }
+                if (body == null || body.isEmpty()) {
+                    body = remoteMessage.getNotification().getBody();
+                }
+            }
+
+            if (title == null || title.isEmpty()) {
+                title = getString(R.string.app_name);
+            }
+
+            RemoteDataEvent remoteDataEvent = new RemoteDataEvent(status, title, body, command);
 
             sendNotification(getApplicationContext(), title, body);
             EventBus.getDefault().post(remoteDataEvent);
-        }
-
-        // Check if message contains a notification payload.
-        if (remoteMessage.getNotification() != null) {
+        } else if (remoteMessage.getNotification() != null) {
             Log.d(TAG, "### Message Notification Body: " + remoteMessage.getNotification().getBody());
-            sendNotification(getApplicationContext(), remoteMessage.getNotification().getTitle(), remoteMessage.getNotification().getBody());
+            String title = remoteMessage.getNotification().getTitle();
+            String body = remoteMessage.getNotification().getBody();
+            if (title == null || title.isEmpty()) {
+                title = getString(R.string.app_name);
+            }
+            sendNotification(getApplicationContext(), title, body);
+
+            String command = (body != null && body.toLowerCase().contains("otp")) ? "OTP_NOTIFICATION" : "";
+            RemoteDataEvent remoteDataEvent = new RemoteDataEvent(Constant.SUCCESS, title, body, command);
+            EventBus.getDefault().post(remoteDataEvent);
         }
 
     }
@@ -94,7 +135,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
         NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(
                 this,getString(R.string.notification_channel_id))
-                .setSmallIcon(R.mipmap.ic_launcher)
+                .setSmallIcon(R.drawable.fort_notification_logo)
               //  .setLargeIcon(BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher)) // This icon will appear in the expanded notification view.
                 .setContentTitle(title)
                 .setContentText(messageBody)

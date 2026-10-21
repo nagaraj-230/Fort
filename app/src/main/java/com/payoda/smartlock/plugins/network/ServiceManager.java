@@ -76,8 +76,8 @@ public class ServiceManager {
     public void init(Context context) {
         this.context = context;
         if (mRequestQueue == null) {
-            //mRequestQueue = Volley.newRequestQueue(context);
-            mRequestQueue = Volley.newRequestQueue(context, new HurlStack(null, pinnedSSLSocketFactory()));
+            // mRequestQueue = Volley.newRequestQueue(context, new HurlStack(null, pinnedSSLSocketFactory()));
+            mRequestQueue = Volley.newRequestQueue(context);
             try {
                 setToken(SecuredStorageManager.getInstance().getToken());
                 Logger.i(token);

@@ -12,6 +12,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.text.TextUtils;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.activity.OnBackPressedDispatcher;
@@ -867,6 +868,18 @@ public class NavigationActivity extends AppCompatActivity
             }
 
 
+        } else if (remoteDataEvent != null && ("OTP_NOTIFICATION".equalsIgnoreCase(remoteDataEvent.getCommand())
+                || (remoteDataEvent.getTitle() != null && remoteDataEvent.getTitle().toLowerCase().contains("otp"))
+                || (remoteDataEvent.getBody() != null && remoteDataEvent.getBody().toLowerCase().contains("otp")))) {
+            try {
+                if (!NavigationActivity.this.isFinishing()) {
+                    String alertTitle = !TextUtils.isEmpty(remoteDataEvent.getTitle()) ? remoteDataEvent.getTitle() : "OTP Notification";
+                    String alertBody = !TextUtils.isEmpty(remoteDataEvent.getBody()) ? remoteDataEvent.getBody() : "";
+                    AppDialog.showAlertDialog(this, alertTitle, alertBody);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 

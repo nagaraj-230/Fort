@@ -19,8 +19,6 @@ public class Login extends ResponseModel {
     private String deviceToken;
     @SerializedName("deviceType")
     private String deviceType = "Android";
-    @SerializedName("code")
-    private int code = 0;
     @SerializedName("authenticationToken")
     private String token;
     @SerializedName("name")
@@ -74,14 +72,6 @@ public class Login extends ResponseModel {
 
     public void setDeviceType(String deviceType) {
         this.deviceType = deviceType;
-    }
-
-    public int getCode() {
-        return code;
-    }
-
-    public void setCode(int code) {
-        this.code = code;
     }
 
     public String getToken() {
