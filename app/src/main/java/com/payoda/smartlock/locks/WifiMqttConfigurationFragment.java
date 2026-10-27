@@ -126,7 +126,14 @@ public class WifiMqttConfigurationFragment extends BaseFragment implements View.
 
     private View initialiseView(View view) {
 
-        ((TextView) view.findViewById(R.id.tv_title)).setText(getString(R.string.wifi_mqtt_config));
+        TextView tvTitle = view.findViewById(R.id.tv_title);
+        tvTitle.setText(getString(R.string.wifi_mqtt_config));
+        tvTitle.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showDebugConfigAlert("Tap SAVE to send to lock.", null);
+            }
+        });
         ivEdit = view.findViewById(R.id.iv_edit);
         ivEdit.setVisibility(View.GONE);
 
@@ -385,11 +392,12 @@ public class WifiMqttConfigurationFragment extends BaseFragment implements View.
             String mqttIp = getMqttIp(BuildConfig.BUILD_VARIANT);
             String mqttPort = getMqttPort(BuildConfig.BUILD_VARIANT);
 
-            System.out.println("####### mqttIp : " + mqttIp); //P
-            System.out.println("####### mqttPort : " + mqttPort); //80
+            System.out.println("==================================================");
+            System.out.println("####### [WIFI_CONFIG] Initial C-lib mqttIp: " + mqttIp);
+            System.out.println("####### [WIFI_CONFIG] Initial C-lib mqttPort: " + mqttPort);
 
             if (brandInfo != null && brandInfo.getMqttServiceUrl() != null && !brandInfo.getMqttServiceUrl().isEmpty()) {
-
+                System.out.println("####### [WIFI_CONFIG] Server brandInfo mqtt_service_url: " + brandInfo.getMqttServiceUrl());
                 int colonIndex = brandInfo.getMqttServiceUrl().lastIndexOf(":");
 
                 if (colonIndex != -1) {
@@ -397,87 +405,143 @@ public class WifiMqttConfigurationFragment extends BaseFragment implements View.
                     mqttIp = brandInfo.getMqttServiceUrl().substring(0, colonIndex);
                     mqttPort = brandInfo.getMqttServiceUrl().substring(colonIndex + 1);
 
-                    Logger.d("### Mqtt service url  ip  = " + mqttIp);
-                    Logger.d("### Mqtt service url  port len = " + mqttPort);
+                    System.out.println("####### [WIFI_CONFIG] Parsed final mqttIp (http-ip): " + mqttIp);
+                    System.out.println("####### [WIFI_CONFIG] Parsed final mqttPort (http-port): " + mqttPort);
 
                 } else {
-                    Logger.d("### Invalid MQTT service URL format.");
+                    System.out.println("####### [WIFI_CONFIG] Invalid MQTT service URL format: " + brandInfo.getMqttServiceUrl());
                 }
 
+            } else {
+                System.out.println("####### [WIFI_CONFIG] brandInfo or getMqttServiceUrl is NULL! Using C-lib fallback.");
             }
 
             wifiMqttConfig.setMqttIp(mqttIp);
             wifiMqttConfig.setMqttPort(Integer.parseInt(mqttPort));
 
-            ServiceManager.getInstance().post(ServiceUrl.WIFI_LOCK_CONFIG_HTTP, wifiMqttConfig, new ResponseHandler() {
+            String fullConfigPayload = new Gson().toJson(wifiMqttConfig);
+            System.out.println("####### [WIFI_CONFIG] FULL PAYLOAD SENT TO LOCK: " + fullConfigPayload);
+            android.util.Log.e("WIFI_CONFIG", "FULL PAYLOAD SENT TO LOCK: " + fullConfigPayload);
+            System.out.println("==================================================");
 
-                @Override
-                public void onSuccess(Object data) {
+            String alertMessage = "http-ip (mqttIp):\n" + mqttIp
+                    + "\n\nhttp-port (mqttPort):\n" + mqttPort
+                    + "\n\nServer Branding URL:\n" + (brandInfo != null && brandInfo.getMqttServiceUrl() != null ? brandInfo.getMqttServiceUrl() : "null (Using C fallback)")
+                    + "\n\nRouter SSID:\n" + wifiMqttConfig.getWifiSsid();
 
-                    Loader.getInstance().hideLoader();
-
-                    if (data != null) {
-
-                        WifiLockResponse lockResponse = new Gson().fromJson(data.toString(), WifiLockResponse.class);
-
-                        if (lockResponse != null && lockResponse.getStatus() != null
-                                && lockResponse.getStatus().equalsIgnoreCase("success")) {
-
-                            forgetWIFINetwork(context, mLock);
-
-                            AppDialog.showAlertDialog(getContext(), "Wifi configuration updated Successfully.",
-                                    new DialogInterface.OnClickListener() {
-                                        @Override
-                                        public void onClick(DialogInterface dialogInterface, int i) {
-                                            doPushWifiAddedServer(lock);
-
-                                            if (getActivity() != null) {
-                                                requireActivity().getOnBackPressedDispatcher().onBackPressed();
-                                            }
-                                        }
-                                    });
-                        } else {
-                            onError(data.toString());
+            AppDialog.showAlertDialog(getContext(), "Captured MQTT / HTTP Config", alertMessage, "SEND TO LOCK",
+                    new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            sendWifiConfigToLock(context, lock, wifiMqttConfig);
                         }
-                    } else {
-                        AppDialog.showAlertDialog(getContext(), "Invalid response from Lock. Please try again later.");
-                    }
-                }
-
-                @Override
-                public void onAuthError(String message) {
-                    Loader.getInstance().hideLoader();
-                }
-
-                @Override
-                public void onError(String message) {
-
-                    Loader.getInstance().hideLoader();
-
-                    if (message != null && message.equals("No Internet. Please Check your network connection.")) {
-                        AppDialog.showAlertDialog(context, message);
-                    } else {
-                        WifiLockResponse response = new Gson().fromJson(message, WifiLockResponse.class);
-                        if (response != null) {
-                            String errorMessage = "";
-                            if (response.getErrorMessage().equalsIgnoreCase(Constant.WIFI_NOT_CONNECTED)) {
-                                errorMessage = context.getString(R.string.home_wifi_not_connected);
-                            } else if (response.getErrorMessage().equalsIgnoreCase(Constant.MQTT_NOT_CONNECTED)) {
-                                errorMessage = context.getString(R.string.mqtt_not_connected);
-                            } else {
-                                errorMessage = message;
-                            }
-
-                            AppDialog.showAlertDialog(getContext(), errorMessage);
-
-                        } else {
-                            AppDialog.showAlertDialog(getContext(), message);
-                        }
-                    }
-                }
-            });
+                    }, "CANCEL", null);
 
         }
+    }
+
+    private void showDebugConfigAlert(String subtitle, final Runnable onProceed) {
+        BrandInfoResponse.BrandInfo brandInfo = SecuredStorageManager.getInstance().getBrandInfo();
+        String mqttIp = getMqttIp(BuildConfig.BUILD_VARIANT);
+        String mqttPort = getMqttPort(BuildConfig.BUILD_VARIANT);
+
+        String brandUrl = (brandInfo != null && brandInfo.getMqttServiceUrl() != null) ? brandInfo.getMqttServiceUrl() : null;
+
+        if (brandUrl != null && !brandUrl.isEmpty()) {
+            int colonIndex = brandUrl.lastIndexOf(":");
+            if (colonIndex != -1) {
+                mqttIp = brandUrl.substring(0, colonIndex);
+                mqttPort = brandUrl.substring(colonIndex + 1);
+            }
+        }
+
+        String message = "Host / IP (http-ip):\n" + mqttIp
+                + "\n\nPort (http-port):\n" + mqttPort
+                + "\n\nServer Branding URL:\n" + (brandUrl != null ? brandUrl : "null (Using C fallback)")
+                + "\n\nBuild Variant: " + BuildConfig.BUILD_VARIANT
+                + (subtitle != null && !subtitle.isEmpty() ? "\n\n" + subtitle : "");
+
+        if (onProceed != null) {
+            AppDialog.showAlertDialog(getContext(), "Captured MQTT / HTTP Config", message, "PROCEED",
+                    new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            onProceed.run();
+                        }
+                    }, "CANCEL", null);
+        } else {
+            AppDialog.showAlertDialog(getContext(), "Captured MQTT / HTTP Config", message);
+        }
+    }
+
+    private void sendWifiConfigToLock(final Context context, final Lock lock, final WifiMqttConfigV6 wifiMqttConfig) {
+        ServiceManager.getInstance().post(ServiceUrl.WIFI_LOCK_CONFIG_HTTP, wifiMqttConfig, new ResponseHandler() {
+
+            @Override
+            public void onSuccess(Object data) {
+
+                Loader.getInstance().hideLoader();
+
+                if (data != null) {
+
+                    WifiLockResponse lockResponse = new Gson().fromJson(data.toString(), WifiLockResponse.class);
+
+                    if (lockResponse != null && lockResponse.getStatus() != null
+                            && lockResponse.getStatus().equalsIgnoreCase("success")) {
+
+                        forgetWIFINetwork(context, mLock);
+
+                        AppDialog.showAlertDialog(getContext(), "Wifi configuration updated Successfully.",
+                                new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialogInterface, int i) {
+                                        doPushWifiAddedServer(lock);
+
+                                        if (getActivity() != null) {
+                                            requireActivity().getOnBackPressedDispatcher().onBackPressed();
+                                        }
+                                    }
+                                });
+                    } else {
+                        onError(data.toString());
+                    }
+                } else {
+                    AppDialog.showAlertDialog(getContext(), "Invalid response from Lock. Please try again later.");
+                }
+            }
+
+            @Override
+            public void onAuthError(String message) {
+                Loader.getInstance().hideLoader();
+            }
+
+            @Override
+            public void onError(String message) {
+
+                Loader.getInstance().hideLoader();
+
+                if (message != null && message.equals("No Internet. Please Check your network connection.")) {
+                    AppDialog.showAlertDialog(context, message);
+                } else {
+                    WifiLockResponse response = new Gson().fromJson(message, WifiLockResponse.class);
+                    if (response != null) {
+                        String errorMessage = "";
+                        if (response.getErrorMessage().equalsIgnoreCase(Constant.WIFI_NOT_CONNECTED)) {
+                            errorMessage = context.getString(R.string.home_wifi_not_connected);
+                        } else if (response.getErrorMessage().equalsIgnoreCase(Constant.MQTT_NOT_CONNECTED)) {
+                            errorMessage = context.getString(R.string.mqtt_not_connected);
+                        } else {
+                            errorMessage = message;
+                        }
+
+                        AppDialog.showAlertDialog(getContext(), errorMessage);
+
+                    } else {
+                        AppDialog.showAlertDialog(getContext(), message);
+                    }
+                }
+            }
+        });
     }
 
     private boolean validateWifiSsid() {
