@@ -30,11 +30,16 @@ import android.widget.RadioButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.SwitchCompat;
 
 import com.google.android.material.textfield.TextInputLayout;
+import com.payoda.smartlock.model.MasterOtpRequest;
+import org.json.JSONObject;
 import com.google.gson.Gson;
 import com.payoda.smartlock.App;
 import com.payoda.smartlock.BuildConfig;
@@ -100,7 +105,7 @@ public class LockDetailFragment extends BaseFragment {
     private TextView tvDoorTitle, tvEngageLock;
     private ImageView ivEdit, ivSave, iv_engage, ivSettings;
     private LinearLayout llUserHistoryV3, llLockContainer;
-    private Button btnUser, btnHistory, btnFP, btnRFID, btnManagePin, btnHistoryV3;
+    private Button btnUser, btnHistory, btnFP, btnRFID, btnManagePin, btnHistoryV3, btnMotp;
     public static Lock mLock;
     private TextInputLayout doorTitleWrapper;
     private TextView tvBattery, lblBatteryLabel;
@@ -252,6 +257,9 @@ public class LockDetailFragment extends BaseFragment {
         btnManagePin = view.findViewById(R.id.btn_manage_pin);
         btnManagePin.setText(getString(R.string.otp_keys_txt));
         btnManagePin.setCompoundDrawablesWithIntrinsicBounds(0, R.mipmap.ic_log_otp, 0, 0);
+        btnMotp = view.findViewById(R.id.btn_motp);
+        btnMotp.setText("MOTP");
+        btnMotp.setCompoundDrawablesWithIntrinsicBounds(0, R.mipmap.ic_pin, 0, 0);
         btnHistoryV3 = view.findViewById(R.id.btn_history_v3);
         llUserHistoryV3 = view.findViewById(R.id.ll_user_history_container_v3);
         tvBattery = view.findViewById(R.id.tv_battery);
@@ -508,6 +516,13 @@ public class LockDetailFragment extends BaseFragment {
                     }
                 }
 
+            }
+        });
+
+        btnMotp.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                fetchAndShowMasterOtp();
             }
         });
 
@@ -1033,6 +1048,7 @@ public class LockDetailFragment extends BaseFragment {
                 btnRFID.setVisibility(View.GONE);
                 btnFP.setVisibility(View.GONE);
                 btnManagePin.setVisibility(View.GONE);
+                btnMotp.setVisibility(View.GONE);
                 btnHistory.setVisibility(View.GONE);
                 tvBattery.setVisibility(View.GONE);
                 lblBatteryLabel.setVisibility(View.GONE);
@@ -1050,12 +1066,15 @@ public class LockDetailFragment extends BaseFragment {
                 btnUser.setVisibility(View.GONE);
                 btnRFID.setVisibility(View.GONE);
 
-                // Show Fingerprint, History, OTP, Battery Level, Wi-Fi Configuration
+                // Show Fingerprint, History, OTP, MOTP, Battery Level, Wi-Fi Configuration
                 btnFP.setVisibility(View.VISIBLE);
                 btnHistory.setVisibility(View.VISIBLE);
                 btnManagePin.setVisibility(View.VISIBLE);
                 btnManagePin.setText(getString(R.string.otp_keys_txt));
                 btnManagePin.setCompoundDrawablesWithIntrinsicBounds(0, R.mipmap.ic_log_otp, 0, 0);
+                btnMotp.setVisibility(View.VISIBLE);
+                btnMotp.setText("MOTP");
+                btnMotp.setCompoundDrawablesWithIntrinsicBounds(0, R.mipmap.ic_pin, 0, 0);
 
                 updateBattery();
                 tvBattery.setVisibility(View.VISIBLE);
@@ -1621,15 +1640,17 @@ public class LockDetailFragment extends BaseFragment {
 
     private final Handler mHistoryHandler = new Handler(Looper.getMainLooper());
     private Runnable mHistoryRunnable;
-    private static final int POLLING_INTERVAL_MS = 5000;
+    private static final int POLLING_INTERVAL_MS = 3000;
     private String mLatestLogId = null;
     private boolean mIsFirstPoll = true;
+    private boolean mIsFirstOtpPoll = true;
 
     private void startHistoryPolling() {
         if (mLock == null || mLock.getId() == null) {
             return;
         }
         mIsFirstPoll = true;
+        mIsFirstOtpPoll = true;
         mLatestLogId = null;
         mHistoryRunnable = new Runnable() {
             @Override
@@ -1641,6 +1662,10 @@ public class LockDetailFragment extends BaseFragment {
                     mHistoryHandler.postDelayed(this, POLLING_INTERVAL_MS);
                     return;
                 }
+
+                // Solution B: Check for new OTP arrivals directly from server
+                checkNewOtpArrival();
+
                 String url = String.format(java.util.Locale.ENGLISH, com.payoda.smartlock.constants.ServiceUrl.GET_HISTORY, mLock.getId(), "5", "0") + "&t=" + System.currentTimeMillis();
                 ServiceManager.getInstance().get(url, null, new ResponseHandler() {
                     @Override
@@ -1714,6 +1739,61 @@ public class LockDetailFragment extends BaseFragment {
             }
         };
         mHistoryHandler.post(mHistoryRunnable);
+    }
+
+    private void checkNewOtpArrival() {
+        if (mLock == null || mLock.getId() == null || getActivity() == null || isDetached() || !isAdded()) {
+            return;
+        }
+        OtpKeyService.getInstance().getOtp(mLock.getId(), "0", new ResponseHandler() {
+            @Override
+            public void onSuccess(Object data) {
+                if (getActivity() == null || isDetached() || !isAdded() || data == null) return;
+                try {
+                    OtpResponse otpResponse = new Gson().fromJson(data.toString(), OtpResponse.class);
+                    if (otpResponse != null && otpResponse.getOtpData() != null) {
+                        ArrayList<LockKeys> lockKeysList = otpResponse.getOtpData().getLockKeyList();
+                        if (lockKeysList != null && !lockKeysList.isEmpty()) {
+                            if (mIsFirstOtpPoll) {
+                                // Baseline: mark pre-existing OTPs as seen so old history doesn't pop up on load
+                                for (LockKeys lk : lockKeysList) {
+                                    if (lk.getId() != null) {
+                                        SecuredStorageManager.getInstance().addNotifiedOtpId(lk.getId());
+                                    }
+                                }
+                                mIsFirstOtpPoll = false;
+                                Logger.d(TAG, "Baseline OTP keys cached. Count: " + lockKeysList.size());
+                                return;
+                            }
+
+                            // Subsequent polls: check if a newly created OTP arrived
+                            for (LockKeys lk : lockKeysList) {
+                                if (lk.getId() != null && !SecuredStorageManager.getInstance().isOtpIdNotified(lk.getId())) {
+                                    String encryptedOtp = lk.getKey();
+                                    if (encryptedOtp != null && !encryptedOtp.isEmpty()) {
+                                        String decryptedOtp = AESEncryption.getInstance().decrypt(encryptedOtp, true);
+                                        Logger.d(TAG, "Live Polling: New OTP detected: " + decryptedOtp + " (Key ID: " + lk.getId() + ")");
+                                        SecuredStorageManager.getInstance().addNotifiedOtpId(lk.getId());
+                                        showOtpNotification(decryptedOtp);
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    Logger.e(e);
+                }
+            }
+
+            @Override
+            public void onAuthError(String message) {
+            }
+
+            @Override
+            public void onError(String message) {
+            }
+        });
     }
 
     private void stopHistoryPolling() {
@@ -1844,4 +1924,104 @@ public class LockDetailFragment extends BaseFragment {
         }
     }
 
+    private void fetchAndShowMasterOtp() {
+        if (mLock == null || TextUtils.isEmpty(mLock.getSerialNumber())) {
+            AppDialog.showAlertDialog(getContext(), "Lock details not found.");
+            return;
+        }
+
+        if (!ServiceManager.getInstance().isNetworkAvailable(getContext())) {
+            AppDialog.showAlertDialog(getContext(), getString(R.string.no_internet));
+            return;
+        }
+
+        Loader.getInstance().showLoader(getContext());
+
+        MasterOtpRequest request = new MasterOtpRequest(mLock.getSerialNumber());
+        ServiceManager.getInstance().post(ServiceUrl.SHOW_MASTER_OTP, request, new ResponseHandler() {
+            @Override
+            public void onSuccess(Object data) {
+                Loader.getInstance().hideLoader();
+                try {
+                    Logger.d(TAG, "show-masterotp response: " + data);
+                    JSONObject jsonObject = new JSONObject(data.toString());
+                    String status = jsonObject.optString("status", "");
+                    if ("success".equalsIgnoreCase(status) && jsonObject.has("response")) {
+                        JSONObject respObj = jsonObject.getJSONObject("response");
+                        String masterOtp = respObj.optString("master-otp", "");
+                        if (!TextUtils.isEmpty(masterOtp)) {
+                            showMasterOtpDialog(masterOtp);
+                        } else {
+                            AppDialog.showAlertDialog(getContext(), "Master OTP is not available at the moment.");
+                        }
+                    } else {
+                        String msg = jsonObject.optString("message", "Unable to fetch Master OTP. Please try again.");
+                        AppDialog.showAlertDialog(getContext(), msg);
+                    }
+                } catch (Exception e) {
+                    Logger.e(e);
+                    AppDialog.showAlertDialog(getContext(), "Failed to parse Master OTP response.");
+                }
+            }
+
+            @Override
+            public void onAuthError(String message) {
+                Loader.getInstance().hideLoader();
+                AppDialog.showAlertDialog(getContext(), message);
+            }
+
+            @Override
+            public void onError(String message) {
+                Loader.getInstance().hideLoader();
+                AppDialog.showAlertDialog(getContext(), message);
+            }
+        });
+    }
+
+    private void showMasterOtpDialog(final String masterOtp) {
+        if (getActivity() == null || getActivity().isFinishing()) {
+            return;
+        }
+
+        getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
+                builder.setTitle("Master OTP");
+
+                String lockName = (mLock != null && !TextUtils.isEmpty(mLock.getName())) ? mLock.getName() : "Door Lock";
+                String message = "Lock: " + lockName + "\n\n"
+                        + "Current Master OTP:\n\n"
+                        + "      " + masterOtp + "      \n\n"
+                        + "Use this OTP on the lock keypad to unlock.";
+                builder.setMessage(message);
+
+                builder.setPositiveButton("COPY CODE", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        try {
+                            ClipboardManager clipboard = (ClipboardManager) requireContext().getSystemService(Context.CLIPBOARD_SERVICE);
+                            ClipData clip = ClipData.newPlainText("Master OTP", masterOtp);
+                            if (clipboard != null) {
+                                clipboard.setPrimaryClip(clip);
+                                Toast.makeText(getContext(), "Master OTP copied to clipboard", Toast.LENGTH_SHORT).show();
+                            }
+                        } catch (Exception e) {
+                            Logger.e(e);
+                        }
+                    }
+                });
+
+                builder.setNegativeButton("CLOSE", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.dismiss();
+                    }
+                });
+
+                builder.setCancelable(true);
+                builder.show();
+            }
+        });
+    }
 }

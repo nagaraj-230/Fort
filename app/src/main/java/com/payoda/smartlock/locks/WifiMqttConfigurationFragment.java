@@ -128,12 +128,6 @@ public class WifiMqttConfigurationFragment extends BaseFragment implements View.
 
         TextView tvTitle = view.findViewById(R.id.tv_title);
         tvTitle.setText(getString(R.string.wifi_mqtt_config));
-        tvTitle.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showDebugConfigAlert("Tap SAVE to send to lock.", null);
-            }
-        });
         ivEdit = view.findViewById(R.id.iv_edit);
         ivEdit.setVisibility(View.GONE);
 
@@ -419,58 +413,7 @@ public class WifiMqttConfigurationFragment extends BaseFragment implements View.
             wifiMqttConfig.setMqttIp(mqttIp);
             wifiMqttConfig.setMqttPort(Integer.parseInt(mqttPort));
 
-            String fullConfigPayload = new Gson().toJson(wifiMqttConfig);
-            System.out.println("####### [WIFI_CONFIG] FULL PAYLOAD SENT TO LOCK: " + fullConfigPayload);
-            android.util.Log.e("WIFI_CONFIG", "FULL PAYLOAD SENT TO LOCK: " + fullConfigPayload);
-            System.out.println("==================================================");
-
-            String alertMessage = "http-ip (mqttIp):\n" + mqttIp
-                    + "\n\nhttp-port (mqttPort):\n" + mqttPort
-                    + "\n\nServer Branding URL:\n" + (brandInfo != null && brandInfo.getMqttServiceUrl() != null ? brandInfo.getMqttServiceUrl() : "null (Using C fallback)")
-                    + "\n\nRouter SSID:\n" + wifiMqttConfig.getWifiSsid();
-
-            AppDialog.showAlertDialog(getContext(), "Captured MQTT / HTTP Config", alertMessage, "SEND TO LOCK",
-                    new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-                            sendWifiConfigToLock(context, lock, wifiMqttConfig);
-                        }
-                    }, "CANCEL", null);
-
-        }
-    }
-
-    private void showDebugConfigAlert(String subtitle, final Runnable onProceed) {
-        BrandInfoResponse.BrandInfo brandInfo = SecuredStorageManager.getInstance().getBrandInfo();
-        String mqttIp = getMqttIp(BuildConfig.BUILD_VARIANT);
-        String mqttPort = getMqttPort(BuildConfig.BUILD_VARIANT);
-
-        String brandUrl = (brandInfo != null && brandInfo.getMqttServiceUrl() != null) ? brandInfo.getMqttServiceUrl() : null;
-
-        if (brandUrl != null && !brandUrl.isEmpty()) {
-            int colonIndex = brandUrl.lastIndexOf(":");
-            if (colonIndex != -1) {
-                mqttIp = brandUrl.substring(0, colonIndex);
-                mqttPort = brandUrl.substring(colonIndex + 1);
-            }
-        }
-
-        String message = "Host / IP (http-ip):\n" + mqttIp
-                + "\n\nPort (http-port):\n" + mqttPort
-                + "\n\nServer Branding URL:\n" + (brandUrl != null ? brandUrl : "null (Using C fallback)")
-                + "\n\nBuild Variant: " + BuildConfig.BUILD_VARIANT
-                + (subtitle != null && !subtitle.isEmpty() ? "\n\n" + subtitle : "");
-
-        if (onProceed != null) {
-            AppDialog.showAlertDialog(getContext(), "Captured MQTT / HTTP Config", message, "PROCEED",
-                    new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-                            onProceed.run();
-                        }
-                    }, "CANCEL", null);
-        } else {
-            AppDialog.showAlertDialog(getContext(), "Captured MQTT / HTTP Config", message);
+            sendWifiConfigToLock(context, lock, wifiMqttConfig);
         }
     }
 

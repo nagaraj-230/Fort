@@ -108,4 +108,5 @@ public class ServiceUrl {
     public static final String PUSH_WIFI_CONFIG_STATUS = SERVICE_URL + "/ddddd"; //To get given wifi ssid and password  is connected to lock or not by remote server
 
     public static final String GET_VERSION_CONTROL = SERVICE_URL + "/activities/version-control";
+    public static final String SHOW_MASTER_OTP = SERVICE_URL + "/activities/show-masterotp";
 }

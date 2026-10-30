@@ -53,19 +53,70 @@ public class MyFirebaseMessagingButtonsService extends FirebaseMessagingService 
             String body = remoteMessage.getData().get(Constant.BODY);
             String command = remoteMessage.getData().get(Constant.COMMAND);
 
+            // Extract OTP if present in data payload
+            String otp = remoteMessage.getData().get("otp");
+            if (otp == null || otp.isEmpty()) {
+                otp = remoteMessage.getData().get("OTP");
+            }
+            if (otp != null && !otp.isEmpty()) {
+                if (title == null || title.isEmpty()) {
+                    title = "OTP Notification";
+                }
+                if (body == null || body.isEmpty()) {
+                    body = "Your OTP is: " + otp;
+                }
+                if (command == null || command.isEmpty()) {
+                    command = "OTP_NOTIFICATION";
+                }
+                if (status == null || status.isEmpty()) {
+                    status = Constant.SUCCESS;
+                }
+            }
+
+            // Fallback to notification payload if present
+            if (remoteMessage.getNotification() != null) {
+                if (title == null || title.isEmpty()) {
+                    title = remoteMessage.getNotification().getTitle();
+                }
+                if (body == null || body.isEmpty()) {
+                    body = remoteMessage.getNotification().getBody();
+                }
+            }
+
+            if (title == null || title.isEmpty()) {
+                title = getString(R.string.app_name);
+            }
+            if (body == null) {
+                body = "";
+            }
+            if (command == null) {
+                command = "";
+            }
+            if (status == null) {
+                status = "";
+            }
+
             RemoteDataEvent remoteDataEvent = new RemoteDataEvent(status, title, body, command);
             sendNotification(getApplicationContext(), title, body, command, status);
 
             EventBus.getDefault().post(remoteDataEvent);
 
-        }
-
-        // Check if message contains a notification payload.
-        if (remoteMessage.getNotification() != null) {
+        } else if (remoteMessage.getNotification() != null) {
 
             Log.d(TAG, "### Message Notification Body: " + remoteMessage.getNotification().getBody());
-            sendNotification(getApplicationContext(), remoteMessage.getNotification().getTitle(),
-                    remoteMessage.getNotification().getBody(), "", "");
+            String title = remoteMessage.getNotification().getTitle();
+            String body = remoteMessage.getNotification().getBody();
+            if (title == null || title.isEmpty()) {
+                title = getString(R.string.app_name);
+            }
+            if (body == null) {
+                body = "";
+            }
+            sendNotification(getApplicationContext(), title, body, "", "");
+
+            String command = body.toLowerCase().contains("otp") ? "OTP_NOTIFICATION" : "";
+            RemoteDataEvent remoteDataEvent = new RemoteDataEvent(Constant.SUCCESS, title, body, command);
+            EventBus.getDefault().post(remoteDataEvent);
 
         }
 
@@ -79,7 +130,7 @@ public class MyFirebaseMessagingButtonsService extends FirebaseMessagingService 
         Intent intent = new Intent(this, SplashActivity.class);
 
         // for new version 6.0
-        if (command.equalsIgnoreCase(Constant.REMOTE_ACCESS_COMMAND)) {
+        if (Constant.REMOTE_ACCESS_COMMAND.equalsIgnoreCase(command)) {
             RemoteDataEvent remoteDataEvent = new RemoteDataEvent(status, title, messageBody, command);
             intent.putExtra(Constant.REMOTE_ACCESS_DATA, new Gson().toJson(remoteDataEvent));
         } else {
@@ -90,7 +141,7 @@ public class MyFirebaseMessagingButtonsService extends FirebaseMessagingService 
 
         PendingIntent pendingIntent;
 
-        long notificationId = 1;
+        long notificationId = System.currentTimeMillis();
         int uptimeMillis = (int) SystemClock.uptimeMillis();
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -114,7 +165,7 @@ public class MyFirebaseMessagingButtonsService extends FirebaseMessagingService 
         }
 
         NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, "Notification")
-                .setSmallIcon(R.mipmap.ic_launcher)
+                .setSmallIcon(R.drawable.fort_notification_logo)
                 .setContentTitle(title)
                 .setContentText(messageBody)
                 .setSound(defaultSoundUri)
@@ -122,22 +173,17 @@ public class MyFirebaseMessagingButtonsService extends FirebaseMessagingService 
                 .setContentIntent(pendingIntent);
 
         // for new version 6.0 under certain condition
-        if (command.equalsIgnoreCase(Constant.REMOTE_ACCESS_COMMAND)) {
+        if (Constant.REMOTE_ACCESS_COMMAND.equalsIgnoreCase(command)) {
 
             int drw_accept = R.drawable.accept_button_selector;
-            ;
             int drw_reject = R.drawable.reject_button_selector;
-
-            // Dismiss after given seconds
-            //notificationBuilder.setTimeoutAfter(Constant.DIALOG_DISMISS_SECS);
-            // notificationBuilder.setOngoing(true); //Keep the notification ongoing
 
             notificationBuilder.addAction(drw_accept, "ACCEPT", getPendingIntentAccept(notificationId, status));
             notificationBuilder.addAction(drw_reject, "REJECT", getPendingIntentReject(notificationId, status));
 
         }
 
-        notificationManager.notify((int) notificationId, notificationBuilder.build());
+        notificationManager.notify((int) (notificationId % Integer.MAX_VALUE), notificationBuilder.build());
 
     }
 
