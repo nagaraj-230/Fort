@@ -177,7 +177,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center"
-            android:weightSum="4">
+            android:weightSum="5">
 
             <Button
                 android:id="@+id/btn_user"
@@ -225,6 +225,14 @@
                 android:layout_gravity="top"
                 android:drawableTop="@mipmap/ic_pin"
                 android:text="MOTP"
+                android:visibility="gone" />
+
+            <Button
+                android:id="@+id/btn_access_otp"
+                style="@style/LockDetailButton"
+                android:layout_gravity="top"
+                android:drawableTop="@mipmap/ic_log_otp"
+                android:text="Access OTP"
                 android:visibility="gone" />
 
         </LinearLayout>

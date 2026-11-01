@@ -109,4 +109,5 @@ public class ServiceUrl {
 
     public static final String GET_VERSION_CONTROL = SERVICE_URL + "/activities/version-control";
     public static final String SHOW_MASTER_OTP = SERVICE_URL + "/activities/show-masterotp";
+    public static final String DIRECT_GET_ACCESS_OTP = SERVICE_URL + "/locks/get-acccess-otp";
 }
