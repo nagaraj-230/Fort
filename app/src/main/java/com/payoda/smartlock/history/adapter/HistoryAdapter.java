@@ -76,8 +76,11 @@ public class HistoryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
         if (history != null) {
 
-            if (history.getRole() == null && (history.getType().equalsIgnoreCase("F")
-                    || history.getType().equalsIgnoreCase("FP"))) {
+            if (history.getRole() == null && history.getType() != null && (history.getType().equalsIgnoreCase("F")
+                    || history.getType().equalsIgnoreCase("FP")
+                    || history.getType().equalsIgnoreCase("FM")
+                    || history.getType().equalsIgnoreCase("FO")
+                    || history.getType().equalsIgnoreCase("F0"))) {
 
                 data = data + " User (Fingerprint) engaged the lock";
 
@@ -105,7 +108,7 @@ public class HistoryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
             int iTypeIcon = R.mipmap.ic_wifi;
 
-            if (history.getType().equalsIgnoreCase("W") || history.getType().equalsIgnoreCase("MA")) { // Wifi
+            if (history.getType().equalsIgnoreCase("W")) { // Wifi
                 iTypeIcon = R.mipmap.ic_wifi;
             }
             else if (history.getType().equalsIgnoreCase("B")) { //Ble
@@ -116,8 +119,16 @@ public class HistoryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                 String message = String.format("RFID (%s) engaged the lock", history.getSlot());
                 lblHistory.setText(message);
             }
-            else if (history.getType().equalsIgnoreCase("F") || history.getType().equalsIgnoreCase("FP")) { //Finger
+            else if (history.getType().equalsIgnoreCase("F")
+                    || history.getType().equalsIgnoreCase("FP")
+                    || history.getType().equalsIgnoreCase("FO")
+                    || history.getType().equalsIgnoreCase("F0")) { //Finger
                 iTypeIcon = R.drawable.ic_fp;
+            }
+            else if (history.getType().equalsIgnoreCase("FM")) { // Master Fingerprint
+                iTypeIcon = R.drawable.ic_fp;
+                String message = ("Master Fingerprint engaged the lock");
+                lblHistory.setText(message);
             }
             else if (history.getType().equalsIgnoreCase("P") || history.getType().equalsIgnoreCase("TP")) { // PIN
                 iTypeIcon = R.drawable.ic_log_pin;
@@ -128,10 +139,19 @@ public class HistoryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                 lblHistory.setText(message);
             }
             else if (history.getType().equalsIgnoreCase("TO")) {//OTP V6.0
-
                 iTypeIcon = R.drawable.ic_log_otp;
                 // String message = String.format("OTP (%s) engaged the lock", history.getSlot());
                 String message = ("OTP engaged the lock");
+                lblHistory.setText(message);
+            }
+            else if (history.getType().equalsIgnoreCase("MO")) { // Master OTP
+                iTypeIcon = R.drawable.ic_log_otp;
+                String message = ("Master OTP engaged the lock");
+                lblHistory.setText(message);
+            }
+            else if (history.getType().equalsIgnoreCase("MA")) { // Master Access
+                iTypeIcon = R.mipmap.ic_wifi;
+                String message = ("Master Access engaged the lock");
                 lblHistory.setText(message);
             }
             else if (history.getType().equalsIgnoreCase("I")) { // V4.0

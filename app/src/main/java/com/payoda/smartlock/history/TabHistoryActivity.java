@@ -163,7 +163,7 @@ public class TabHistoryActivity extends AppCompatActivity implements InactiveTim
                                             
                                             History latestLog = historyList.getHistory().get(0);
                                             String logType = latestLog.getType() != null ? latestLog.getType().trim() : "";
-                                            if (logType.equalsIgnoreCase("F") || logType.equalsIgnoreCase("FP")) {
+                                            if (logType.equalsIgnoreCase("F") || logType.equalsIgnoreCase("FP") || logType.equalsIgnoreCase("FM") || logType.equalsIgnoreCase("FO") || logType.equalsIgnoreCase("F0")) {
                                                 String lastNotifiedId = SecuredStorageManager.getInstance().getLastNotifiedFpLogId();
                                                 if (latestLog.getId() != null && !latestLog.getId().equals(lastNotifiedId)) {
                                                     handleNewLogEvent(latestLog);
@@ -234,7 +234,7 @@ public class TabHistoryActivity extends AppCompatActivity implements InactiveTim
         String logType = log.getType() != null ? log.getType().trim() : "";
         if (logType.isEmpty()) return;
 
-        if (logType.equalsIgnoreCase("F") || logType.equalsIgnoreCase("FP")) {
+        if (logType.equalsIgnoreCase("F") || logType.equalsIgnoreCase("FP") || logType.equalsIgnoreCase("FM") || logType.equalsIgnoreCase("FO") || logType.equalsIgnoreCase("F0")) {
             Logger.d(TAG, "Fingerprint log detected. Fetching OTP keys.");
             if (mLock != null && mLock.getId() != null) {
                 OtpKeyService.getInstance().getOtp(mLock.getId(), "1", new ResponseHandler() {
