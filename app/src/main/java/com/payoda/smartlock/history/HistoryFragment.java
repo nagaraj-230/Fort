@@ -189,7 +189,13 @@ public class HistoryFragment extends Fragment implements SwipeRefreshLayout.OnRe
                             hideRefreshing();
                             load_bottom_more_progress.setVisibility(View.GONE);
                             loading = false;
-                            prepopulateData((HistoryList) data, isPullDown);
+                            HistoryList historyList = (HistoryList) data;
+                            int count = (historyList != null && historyList.getHistory() != null) ? historyList.getHistory().size() : 0;
+                            String responseJson = new com.google.gson.GsonBuilder().setPrettyPrinting().create().toJson(historyList);
+                            if (getActivity() != null) {
+                                AppDialog.showAlertDialog(getActivity(), "History API Response (Lock " + mLock.getId() + ", Count: " + count + ")", responseJson);
+                            }
+                            prepopulateData(historyList, isPullDown);
                         } catch (Exception e) {
                             Logger.e(e);
                             AppDialog.showAlertDialog(getContext(), getString(R.string.oops_error));
@@ -216,6 +222,9 @@ public class HistoryFragment extends Fragment implements SwipeRefreshLayout.OnRe
                         hideRefreshing();
                         loading = false;
                         load_bottom_more_progress.setVisibility(View.GONE);
+                        if (getActivity() != null) {
+                            AppDialog.showAlertDialog(getActivity(), "History API Error (Lock " + mLock.getId() + ")", message);
+                        }
                         prepopulateData(null, false);
                     }
                 });
@@ -279,6 +288,9 @@ public class HistoryFragment extends Fragment implements SwipeRefreshLayout.OnRe
     public void onNewLogsDetected(ArrayList<History> newLogs) {
         if (newLogs == null || newLogs.isEmpty()) return;
         if (getActivity() == null || isDetached() || !isAdded()) return;
+
+        History first = newLogs.get(0);
+        Toast.makeText(getActivity(), "[TEST ALERT] History Real-time Poll!\nNew log arrived: Type " + first.getType() + " at " + first.getTime(), Toast.LENGTH_LONG).show();
 
         ArrayList<History> list = mHistoryAdapter.getItemList();
         if (list == null) {

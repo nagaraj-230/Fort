@@ -1080,12 +1080,10 @@ public class LockDetailFragment extends BaseFragment {
                 btnUser.setVisibility(View.GONE);
                 btnRFID.setVisibility(View.GONE);
 
-                // Show Fingerprint, History, OTP, MOTP, Battery Level, Wi-Fi Configuration
+                // Show Fingerprint, History, MOTP, Access OTP, Battery Level, Wi-Fi Configuration (OTP Keys hidden)
                 btnFP.setVisibility(View.VISIBLE);
                 btnHistory.setVisibility(View.VISIBLE);
-                btnManagePin.setVisibility(View.VISIBLE);
-                btnManagePin.setText(getString(R.string.otp_keys_txt));
-                btnManagePin.setCompoundDrawablesWithIntrinsicBounds(0, R.mipmap.ic_log_otp, 0, 0);
+                btnManagePin.setVisibility(View.GONE);
                 btnMotp.setVisibility(View.VISIBLE);
                 btnMotp.setText("MOTP");
                 btnMotp.setCompoundDrawablesWithIntrinsicBounds(0, R.mipmap.ic_pin, 0, 0);
@@ -1731,6 +1729,9 @@ public class LockDetailFragment extends BaseFragment {
                                              for (int i = newLogs.size() - 1; i >= 0; i--) {
                                                  History log = newLogs.get(i);
                                                  Logger.d(TAG, "New log detected! ID: " + log.getId() + ", Type: " + log.getType());
+                                                 if (getActivity() != null) {
+                                                     Toast.makeText(getActivity(), "[TEST ALERT] Dashboard Poll!\nNew Log: Type " + log.getType() + " at " + log.getTime(), Toast.LENGTH_LONG).show();
+                                                 }
                                                  handleNewLogEvent(log);
                                              }
                                          }
@@ -1779,6 +1780,9 @@ public class LockDetailFragment extends BaseFragment {
                             currentOtp = currentOtp.trim();
                             if (!SecuredStorageManager.getInstance().isOtpIdNotified(currentOtp)) {
                                 Logger.d(TAG, "New unseen Access OTP detected: " + currentOtp);
+                                if (getActivity() != null) {
+                                    Toast.makeText(getActivity(), "[TEST ALERT] Dashboard OTP Check!\nNew Access OTP: " + currentOtp, Toast.LENGTH_SHORT).show();
+                                }
                                 SecuredStorageManager.getInstance().addNotifiedOtpId(currentOtp);
                                 showOtpNotification(currentOtp);
                             }

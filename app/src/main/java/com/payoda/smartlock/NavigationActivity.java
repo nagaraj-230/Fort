@@ -210,6 +210,8 @@ public class NavigationActivity extends AppCompatActivity
 
         getVersionControl();
 
+        Toast.makeText(this, "Active Server: " + BuildConfig.BASE_URL, Toast.LENGTH_SHORT).show();
+
     }
 
     /*   private void showDialogForRemoteAccess() {

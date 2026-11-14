@@ -177,7 +177,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center"
-            android:weightSum="5">
+            android:weightSum="4">
 
             <Button
                 android:id="@+id/btn_user"

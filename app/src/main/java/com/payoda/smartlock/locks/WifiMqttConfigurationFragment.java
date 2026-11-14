@@ -23,6 +23,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -383,32 +384,41 @@ public class WifiMqttConfigurationFragment extends BaseFragment implements View.
 
             BrandInfoResponse.BrandInfo brandInfo = SecuredStorageManager.getInstance().getBrandInfo();
 
-            String mqttIp = getMqttIp(BuildConfig.BUILD_VARIANT);
+            // Extract port from brandInfo if present, otherwise default to "443" (or C-lib port)
             String mqttPort = getMqttPort(BuildConfig.BUILD_VARIANT);
+            if (mqttPort == null || mqttPort.isEmpty()) {
+                mqttPort = "443";
+            }
+            if (brandInfo != null && brandInfo.getMqttServiceUrl() != null && !brandInfo.getMqttServiceUrl().isEmpty()) {
+                int colonIndex = brandInfo.getMqttServiceUrl().lastIndexOf(":");
+                if (colonIndex != -1) {
+                    mqttPort = brandInfo.getMqttServiceUrl().substring(colonIndex + 1);
+                }
+            }
+
+            // Enforce build flavor condition for target server URL (http-ip)
+            String mqttIp;
+            boolean isStaging = "S".equalsIgnoreCase(BuildConfig.BUILD_VARIANT) || BuildConfig.BASE_URL.contains("staging");
+            if (isStaging) {
+                mqttIp = "https://techlocstaging.in/api/web/v1/activities";
+            } else {
+                // Production: Use brandInfo URL if provided, otherwise default to https://techloc.in
+                if (brandInfo != null && brandInfo.getMqttServiceUrl() != null && !brandInfo.getMqttServiceUrl().isEmpty()) {
+                    int colonIndex = brandInfo.getMqttServiceUrl().lastIndexOf(":");
+                    if (colonIndex != -1) {
+                        mqttIp = brandInfo.getMqttServiceUrl().substring(0, colonIndex);
+                    } else {
+                        mqttIp = brandInfo.getMqttServiceUrl();
+                    }
+                } else {
+                    mqttIp = "https://techloc.in/api/web/v1/activities";
+                }
+            }
 
             System.out.println("==================================================");
-            System.out.println("####### [WIFI_CONFIG] Initial C-lib mqttIp: " + mqttIp);
-            System.out.println("####### [WIFI_CONFIG] Initial C-lib mqttPort: " + mqttPort);
-
-            if (brandInfo != null && brandInfo.getMqttServiceUrl() != null && !brandInfo.getMqttServiceUrl().isEmpty()) {
-                System.out.println("####### [WIFI_CONFIG] Server brandInfo mqtt_service_url: " + brandInfo.getMqttServiceUrl());
-                int colonIndex = brandInfo.getMqttServiceUrl().lastIndexOf(":");
-
-                if (colonIndex != -1) {
-
-                    mqttIp = brandInfo.getMqttServiceUrl().substring(0, colonIndex);
-                    mqttPort = brandInfo.getMqttServiceUrl().substring(colonIndex + 1);
-
-                    System.out.println("####### [WIFI_CONFIG] Parsed final mqttIp (http-ip): " + mqttIp);
-                    System.out.println("####### [WIFI_CONFIG] Parsed final mqttPort (http-port): " + mqttPort);
-
-                } else {
-                    System.out.println("####### [WIFI_CONFIG] Invalid MQTT service URL format: " + brandInfo.getMqttServiceUrl());
-                }
-
-            } else {
-                System.out.println("####### [WIFI_CONFIG] brandInfo or getMqttServiceUrl is NULL! Using C-lib fallback.");
-            }
+            System.out.println("####### [WIFI_CONFIG] Final mqttIp (http-ip): " + mqttIp);
+            System.out.println("####### [WIFI_CONFIG] Final mqttPort (http-port): " + mqttPort);
+            System.out.println("####### [WIFI_CONFIG] isStaging: " + isStaging + ", BUILD_VARIANT: " + BuildConfig.BUILD_VARIANT);
 
             wifiMqttConfig.setMqttIp(mqttIp);
             wifiMqttConfig.setMqttPort(Integer.parseInt(mqttPort));
@@ -418,6 +428,35 @@ public class WifiMqttConfigurationFragment extends BaseFragment implements View.
     }
 
     private void sendWifiConfigToLock(final Context context, final Lock lock, final WifiMqttConfigV6 wifiMqttConfig) {
+        BrandInfoResponse.BrandInfo brandInfo = SecuredStorageManager.getInstance().getBrandInfo();
+        String brandInfoUrl = (brandInfo != null && brandInfo.getMqttServiceUrl() != null) ? brandInfo.getMqttServiceUrl() : "None/Null";
+        String clibFallback = getMqttIp(BuildConfig.BUILD_VARIANT) + ":" + getMqttPort(BuildConfig.BUILD_VARIANT);
+
+        String alertMessage = "TARGET URL:\n" + ServiceUrl.WIFI_LOCK_CONFIG_HTTP + "\n\n"
+                + "DATA BEING SENT TO LOCK:\n"
+                + "• Server IP (http-ip): " + wifiMqttConfig.getMqttIp() + "\n"
+                + "• Server Port (http-port): " + wifiMqttConfig.getMqttPort() + "\n"
+                + "• Wi-Fi SSID: " + wifiMqttConfig.getWifiSsid() + "\n"
+                + "• Wi-Fi Pass: " + wifiMqttConfig.getWifiPass() + "\n"
+                + "• Wi-Fi Sec: " + wifiMqttConfig.getWifiSec() + "\n"
+                + "• Owner ID: " + wifiMqttConfig.getOwnerId() + "\n\n"
+                + "CONFIG SOURCES:\n"
+                + "• BrandInfo mqtt_url: " + brandInfoUrl + "\n"
+                + "• C-lib Fallback: " + clibFallback;
+
+        AppDialog.showAlertDialog(getContext(), "WIFI_CONFIG Sending Data", alertMessage, "Send to Lock", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                doActualSendWifiConfigToLock(context, lock, wifiMqttConfig);
+            }
+        });
+    }
+
+    private void doActualSendWifiConfigToLock(final Context context, final Lock lock, final WifiMqttConfigV6 wifiMqttConfig) {
+        if (context != null) {
+            Toast.makeText(context, "[TEST ALERT] Sending to Lock:\nSSID: " + wifiMqttConfig.getWifiSsid() + "\nMQTT: " + wifiMqttConfig.getMqttIp() + ":" + wifiMqttConfig.getMqttPort(), Toast.LENGTH_LONG).show();
+        }
+        Loader.getInstance().showLoader(context);
         ServiceManager.getInstance().post(ServiceUrl.WIFI_LOCK_CONFIG_HTTP, wifiMqttConfig, new ResponseHandler() {
 
             @Override
@@ -426,28 +465,36 @@ public class WifiMqttConfigurationFragment extends BaseFragment implements View.
                 Loader.getInstance().hideLoader();
 
                 if (data != null) {
-
-                    WifiLockResponse lockResponse = new Gson().fromJson(data.toString(), WifiLockResponse.class);
-
-                    if (lockResponse != null && lockResponse.getStatus() != null
-                            && lockResponse.getStatus().equalsIgnoreCase("success")) {
-
-                        forgetWIFINetwork(context, mLock);
-
-                        AppDialog.showAlertDialog(getContext(), "Wifi configuration updated Successfully.",
-                                new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dialogInterface, int i) {
-                                        doPushWifiAddedServer(lock);
-
-                                        if (getActivity() != null) {
-                                            requireActivity().getOnBackPressedDispatcher().onBackPressed();
-                                        }
-                                    }
-                                });
-                    } else {
-                        onError(data.toString());
+                    if (getContext() != null) {
+                        Toast.makeText(getContext(), "[TEST ALERT] Lock Wi-Fi Response:\n" + data.toString(), Toast.LENGTH_LONG).show();
                     }
+
+                    AppDialog.showAlertDialog(getContext(), "Lock Wi-Fi Response", "Sent Data:\nServer: " + wifiMqttConfig.getMqttIp() + ":" + wifiMqttConfig.getMqttPort() + "\nSSID: " + wifiMqttConfig.getWifiSsid() + "\n\nLock Response:\n" + data.toString(), new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            WifiLockResponse lockResponse = new Gson().fromJson(data.toString(), WifiLockResponse.class);
+
+                            if (lockResponse != null && lockResponse.getStatus() != null
+                                    && lockResponse.getStatus().equalsIgnoreCase("success")) {
+
+                                forgetWIFINetwork(context, mLock);
+
+                                AppDialog.showAlertDialog(getContext(), "Wifi configuration updated Successfully.",
+                                        new DialogInterface.OnClickListener() {
+                                            @Override
+                                            public void onClick(DialogInterface dialogInterface, int i) {
+                                                doPushWifiAddedServer(lock);
+
+                                                if (getActivity() != null) {
+                                                    requireActivity().getOnBackPressedDispatcher().onBackPressed();
+                                                }
+                                            }
+                                        });
+                            } else {
+                                onError(data.toString());
+                            }
+                        }
+                    });
                 } else {
                     AppDialog.showAlertDialog(getContext(), "Invalid response from Lock. Please try again later.");
                 }
@@ -462,6 +509,11 @@ public class WifiMqttConfigurationFragment extends BaseFragment implements View.
             public void onError(String message) {
 
                 Loader.getInstance().hideLoader();
+                if (getContext() != null) {
+                    Toast.makeText(getContext(), "[TEST ALERT] Lock Wi-Fi Error:\n" + message, Toast.LENGTH_LONG).show();
+                }
+
+                AppDialog.showAlertDialog(getContext(), "Lock Wi-Fi Error", "Sent Data:\nServer: " + wifiMqttConfig.getMqttIp() + ":" + wifiMqttConfig.getMqttPort() + "\nSSID: " + wifiMqttConfig.getWifiSsid() + "\n\nError Message:\n" + message, null);
 
                 if (message != null && message.equals("No Internet. Please Check your network connection.")) {
                     AppDialog.showAlertDialog(context, message);
@@ -640,3 +692,4 @@ public class WifiMqttConfigurationFragment extends BaseFragment implements View.
 
 
 }
+

@@ -7,6 +7,7 @@ import android.os.Looper;
 import android.util.Log;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 //import com.payoda.rootchecker.SourceIDE;
@@ -145,26 +146,37 @@ public class SplashActivity extends AppCompatActivity {
             });
         } else {
             new Handler(Looper.getMainLooper()).postDelayed(() -> {
-
-                SecuredStorageManager.getInstance().setFreshLaunch(true);
-
-                if (SecuredStorageManager.getInstance().getUserData() != null) {
-
-
-
-                    if (SecuredStorageManager.getInstance().getPin() != null) {
-
-                        App.getInstance().showDashboard(SplashActivity.this);
-
-                    } else {
-                        App.getInstance().showFullScreen(SplashActivity.this, Constant.SCREEN.PIN, null);
-                        finish();
-                    }
-
-                } else {
-                    App.getInstance().showLogin(SplashActivity.this);
+                if (isFinishing()) {
+                    return;
                 }
-            }, 3000);
+                AlertDialog.Builder builder = new AlertDialog.Builder(SplashActivity.this);
+                builder.setTitle("Server Environment Check");
+                builder.setMessage("This build is configured to communicate with:\n\nBASE_URL: " + BuildConfig.BASE_URL);
+                builder.setCancelable(false);
+                builder.setPositiveButton("Proceed", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.dismiss();
+                        proceedToNextScreen();
+                    }
+                });
+                builder.show();
+            }, 1000);
+        }
+    }
+
+    private void proceedToNextScreen() {
+        SecuredStorageManager.getInstance().setFreshLaunch(true);
+
+        if (SecuredStorageManager.getInstance().getUserData() != null) {
+            if (SecuredStorageManager.getInstance().getPin() != null) {
+                App.getInstance().showDashboard(SplashActivity.this);
+            } else {
+                App.getInstance().showFullScreen(SplashActivity.this, Constant.SCREEN.PIN, null);
+                finish();
+            }
+        } else {
+            App.getInstance().showLogin(SplashActivity.this);
         }
     }
 

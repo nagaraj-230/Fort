@@ -105,7 +105,7 @@ android {
             versionCode 1
             versionName "1.0.0"
             buildConfigField("String", "APPCENTER_KEY", "\"1ec2d533-08b7-49ff-8742-d251f5c468eb\"")
-            buildConfigField("String", "BASE_URL", "\"https://techloc.in\"")
+            buildConfigField("String", "BASE_URL", "\"https://techlocstaging.in\"")
             buildConfigField("String", "TERMS_CONDITION_URL", "\"https://www.astrixengineering.com/terms-conditions/\"")
             buildConfigField("String", "PRIVACY_URL", "\"https://www.astrixengineering.com/privacy-policy/\"")
             buildConfigField("boolean", "APP_VERSION_VISIBILITY", "false")
