@@ -17,9 +17,15 @@ import com.payoda.smartlock.App;
 import com.payoda.smartlock.R;
 import com.payoda.smartlock.authentication.BaseFragment;
 import com.payoda.smartlock.constants.Constant;
+import com.payoda.smartlock.locks.model.Lock;
+import com.payoda.smartlock.plugins.network.ResponseHandler;
 import com.payoda.smartlock.plugins.storage.SecuredStorageManager;
 import com.payoda.smartlock.sensors.model.Sensor;
+import com.payoda.smartlock.sensors.service.DoorSensorService;
 import com.payoda.smartlock.utils.AppDialog;
+import com.payoda.smartlock.utils.Logger;
+
+import org.json.JSONObject;
 
 public class SensorDetailFragment extends BaseFragment {
 
@@ -103,6 +109,28 @@ public class SensorDetailFragment extends BaseFragment {
                     mSensor.setName(newName);
                     tvSensorTitle.setText(newName);
                     SecuredStorageManager.getInstance().addSensor(mSensor);
+
+                    if (mSensor.getId() != null) {
+                        try {
+                            JSONObject payload = new JSONObject();
+                            payload.put("name", newName);
+                            DoorSensorService.getInstance().updateSensorName(mSensor.getId(), payload, new ResponseHandler() {
+                                @Override
+                                public void onSuccess(Object data) {
+                                    Logger.d(TAG, "Sensor name updated on server: " + data);
+                                }
+
+                                @Override
+                                public void onAuthError(String message) {}
+
+                                @Override
+                                public void onError(String message) {}
+                            });
+                        } catch (Exception e) {
+                            Logger.e(e);
+                        }
+                    }
+
                     Toast.makeText(getContext(), "Sensor name updated", Toast.LENGTH_SHORT).show();
                 }
                 ivSave.setVisibility(View.GONE);
@@ -116,15 +144,26 @@ public class SensorDetailFragment extends BaseFragment {
             ivSettings.setVisibility(View.VISIBLE);
             ivSettings.setOnClickListener(v -> {
                 if (mSensor != null && getActivity() != null) {
-                    App.getInstance().showFullScreen(getActivity(), Constant.SCREEN.WIFI_MQTT_CONFIGURATION, null);
+                    Lock sensorAsLock = new Lock();
+                    sensorAsLock.setId(mSensor.getId());
+                    sensorAsLock.setName(mSensor.getName());
+                    sensorAsLock.setSerialNumber(mSensor.getSerialNumber() != null ? mSensor.getSerialNumber() : mSensor.getCode());
+                    sensorAsLock.setScratchCode(mSensor.getScratchCode());
+                    sensorAsLock.setSensor(true);
+                    App.getInstance().showFullScreen(getActivity(), Constant.SCREEN.WIFI_MQTT_CONFIGURATION, new Gson().toJson(sensorAsLock));
                 }
             });
         }
 
         if (btnSensorHistory != null) {
             btnSensorHistory.setOnClickListener(v -> {
-                if (getActivity() != null) {
-                    App.getInstance().showFullScreen(getActivity(), Constant.SCREEN.HISTORY, null);
+                if (mSensor != null && getActivity() != null) {
+                    Lock sensorAsLock = new Lock();
+                    sensorAsLock.setId(mSensor.getId());
+                    sensorAsLock.setName(mSensor.getName());
+                    sensorAsLock.setSerialNumber(mSensor.getSerialNumber() != null ? mSensor.getSerialNumber() : mSensor.getCode());
+                    sensorAsLock.setSensor(true);
+                    App.getInstance().showFullScreen(getActivity(), Constant.SCREEN.HISTORY, new Gson().toJson(sensorAsLock));
                 }
             });
         }

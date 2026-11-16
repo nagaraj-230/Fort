@@ -138,7 +138,7 @@ public class OwnersLockFragment extends BaseFragment implements ILockSelectCallb
 
     private void doLockListRequest() {
         Loader.getInstance().showLoader(getContext());
-        LockListService.getInstance().getLock(20,0,new ResponseHandler() {
+        LockListService.getInstance().getLock(100,0,new ResponseHandler() {
             @Override
             public void onSuccess(Object data) {
                 Loader.getInstance().hideLoader();

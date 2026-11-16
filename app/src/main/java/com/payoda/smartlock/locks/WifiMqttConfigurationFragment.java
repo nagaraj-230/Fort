@@ -166,7 +166,7 @@ public class WifiMqttConfigurationFragment extends BaseFragment implements View.
         // Fetch the lock list from the server and update it in the local db.
 
         if (mLock != null && mLock.getId() == null) {
-            LockListService.getInstance().getLock(50, 0, new ResponseHandler() {
+            LockListService.getInstance().getLock(100, 0, new ResponseHandler() {
                 @Override
                 public void onSuccess(Object data) {
                     if (data != null) {
@@ -288,6 +288,43 @@ public class WifiMqttConfigurationFragment extends BaseFragment implements View.
 
     private void doSaveConfiguration() {
 
+        if (mLock != null && mLock.isSensor()) {
+            AppDialog.showAlertDialog(getActivity(), "Activate Sensor", "Please put the sensor into configuration mode and click \"OK\".",
+                    "OK", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialogInterface, int i) {
+
+                            Loader.getInstance().showLoader(getContext());
+
+                            // Door Sensor: Use sensor serial/address directly without FORT_ or F_ prefix
+                            String SSID = mLock.getSerialNumber();
+                            String password = mLock.getScratchCode();
+
+                            WifiUtilManager wifiUtilManager = new WifiUtilManager(getContext(), new WifiUtilManager.WifiListener() {
+                                @Override
+                                public void connectionSuccess() {
+                                    Logger.d("Sensor Connection Success");
+
+                                    new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            doMqttWifiConfiguration(getContext(), mLock);
+                                        }
+                                    }, WIFI_DELAY_TIME);
+                                }
+
+                                @Override
+                                public void connectionTimeOut() {
+                                    Loader.getInstance().hideLoader();
+                                    AppDialog.showAlertDialog(getActivity(), "Sensor connection timeout.");
+                                }
+                            });
+                            wifiUtilManager.startScanning("", SSID, password);
+                        }
+                    });
+            return;
+        }
+
         String status;
         String msg;
         if (mLock != null && mLock.getLockVersion().equalsIgnoreCase(HW_VERSION_6_0)) {
@@ -399,10 +436,18 @@ public class WifiMqttConfigurationFragment extends BaseFragment implements View.
             // Enforce build flavor condition for target server URL (http-ip)
             String mqttIp;
             boolean isStaging = "S".equalsIgnoreCase(BuildConfig.BUILD_VARIANT) || BuildConfig.BASE_URL.contains("staging");
-            if (isStaging) {
+            if (mLock != null && mLock.isSensor()) {
+                // Door Sensor target URL
+                if (isStaging) {
+                    mqttIp = "https://techlocstaging.in/door_sensor/api/web/v1/activities";
+                } else {
+                    mqttIp = "https://techloc.in/door_sensor/api/web/v1/activities";
+                }
+            } else if (isStaging) {
+                // Lock Staging target URL
                 mqttIp = "https://techlocstaging.in/api/web/v1/activities";
             } else {
-                // Production: Use brandInfo URL if provided, otherwise default to https://techloc.in
+                // Lock Production: Use brandInfo URL if provided, otherwise default to https://techloc.in
                 if (brandInfo != null && brandInfo.getMqttServiceUrl() != null && !brandInfo.getMqttServiceUrl().isEmpty()) {
                     int colonIndex = brandInfo.getMqttServiceUrl().lastIndexOf(":");
                     if (colonIndex != -1) {

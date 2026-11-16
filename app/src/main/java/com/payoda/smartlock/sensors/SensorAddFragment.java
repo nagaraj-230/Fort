@@ -16,9 +16,16 @@ import com.payoda.smartlock.App;
 import com.payoda.smartlock.R;
 import com.payoda.smartlock.authentication.BaseFragment;
 import com.payoda.smartlock.constants.Constant;
+import com.payoda.smartlock.plugins.network.ResponseHandler;
+import com.payoda.smartlock.plugins.network.ServiceManager;
 import com.payoda.smartlock.plugins.storage.SecuredStorageManager;
 import com.payoda.smartlock.sensors.model.Sensor;
+import com.payoda.smartlock.sensors.service.DoorSensorService;
 import com.payoda.smartlock.utils.AppDialog;
+import com.payoda.smartlock.utils.Loader;
+import com.payoda.smartlock.utils.Logger;
+
+import org.json.JSONObject;
 
 import java.util.UUID;
 
@@ -26,7 +33,7 @@ public class SensorAddFragment extends BaseFragment {
 
     public static final String TAG = "### SensorAddFragment";
 
-    private EditText etSensorName, etSensorCode;
+    private EditText etSensorName, etScratchCode;
     private Button btnAddSensor;
 
     public SensorAddFragment() {
@@ -55,7 +62,7 @@ public class SensorAddFragment extends BaseFragment {
         });
 
         etSensorName = view.findViewById(R.id.et_sensor_name);
-        etSensorCode = view.findViewById(R.id.et_sensor_code);
+        etScratchCode = view.findViewById(R.id.et_scratch_code);
         btnAddSensor = view.findViewById(R.id.btn_add_sensor);
 
         btnAddSensor.setOnClickListener(v -> performAddSensor());
@@ -63,30 +70,84 @@ public class SensorAddFragment extends BaseFragment {
 
     private void performAddSensor() {
         String name = etSensorName.getText() != null ? etSensorName.getText().toString().trim() : "";
-        String code = etSensorCode.getText() != null ? etSensorCode.getText().toString().trim() : "";
+        String scratchCode = etScratchCode.getText() != null ? etScratchCode.getText().toString().trim() : "";
 
         if (TextUtils.isEmpty(name)) {
             AppDialog.showAlertDialog(getContext(), "Please enter Sensor Name");
             return;
         }
 
-        if (TextUtils.isEmpty(code)) {
-            AppDialog.showAlertDialog(getContext(), "Please enter Sensor Code");
+        if (TextUtils.isEmpty(scratchCode)) {
+            AppDialog.showAlertDialog(getContext(), "Please enter Scratch Code");
             return;
         }
 
-        Sensor sensor = new Sensor();
-        sensor.setId(UUID.randomUUID().toString());
-        sensor.setName(name);
-        sensor.setCode(code);
-        sensor.setBattery("100");
-        sensor.setStatus("1");
+        if (getContext() == null || !ServiceManager.getInstance().isNetworkAvailable(getContext())) {
+            AppDialog.showAlertDialog(getContext(), getString(R.string.no_internet));
+            return;
+        }
 
-        SecuredStorageManager.getInstance().addSensor(sensor);
-        Toast.makeText(getContext(), "Sensor added successfully!", Toast.LENGTH_SHORT).show();
+        Loader.getInstance().showLoader(getContext());
 
-        if (getActivity() != null) {
-            App.getInstance().showFullScreen(getActivity(), Constant.SCREEN.SENSOR_DETAILS, new Gson().toJson(sensor));
+        try {
+            JSONObject payload = new JSONObject();
+            payload.put("name", name);
+            payload.put("scratch_code", scratchCode);
+
+            DoorSensorService.getInstance().addSensor(payload, new ResponseHandler() {
+                @Override
+                public void onSuccess(Object data) {
+                    Loader.getInstance().hideLoader();
+                    Logger.d(TAG, "addSensor response: " + data);
+
+                    Sensor sensor = new Sensor();
+                    sensor.setName(name);
+                    sensor.setScratchCode(scratchCode);
+                    sensor.setBattery("100");
+                    sensor.setStatus("1");
+
+                    try {
+                        if (data != null) {
+                            JSONObject res = new JSONObject(data.toString());
+                            JSONObject dataObj = res.has("data") ? res.optJSONObject("data") : res;
+                            if (dataObj != null) {
+                                sensor.setId(dataObj.optString("id", UUID.randomUUID().toString()));
+                                String serial = dataObj.optString("serial_number", dataObj.optString("serialNumber", ""));
+                                if (!TextUtils.isEmpty(serial)) {
+                                    sensor.setSerialNumber(serial);
+                                    sensor.setCode(serial);
+                                }
+                            }
+                        }
+                    } catch (Exception e) {
+                        Logger.e(e);
+                        sensor.setId(UUID.randomUUID().toString());
+                    }
+
+                    SecuredStorageManager.getInstance().addSensor(sensor);
+                    Toast.makeText(getContext(), "Sensor added successfully!", Toast.LENGTH_SHORT).show();
+
+                    if (getActivity() != null) {
+                        App.getInstance().showFullScreen(getActivity(), Constant.SCREEN.SENSOR_DETAILS, new Gson().toJson(sensor));
+                    }
+                }
+
+                @Override
+                public void onAuthError(String message) {
+                    Loader.getInstance().hideLoader();
+                    AppDialog.showAlertDialog(getContext(), message);
+                }
+
+                @Override
+                public void onError(String message) {
+                    Loader.getInstance().hideLoader();
+                    AppDialog.showAlertDialog(getContext(), "Error Adding Sensor", message);
+                }
+            });
+        } catch (Exception e) {
+            Loader.getInstance().hideLoader();
+            Logger.e(e);
+            AppDialog.showAlertDialog(getContext(), "Failed to create request: " + e.getMessage());
         }
     }
 }

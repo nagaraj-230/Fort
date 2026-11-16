@@ -182,7 +182,7 @@ public class HistoryFragment extends Fragment implements SwipeRefreshLayout.OnRe
                     load_bottom_more_progress.setVisibility(View.VISIBLE);
                 }
 
-                HistoryService.getInstance().serviceRequest(mLock.getId(), LIMIT, offset, new ResponseHandler() {
+                ResponseHandler historyResponseHandler = new ResponseHandler() {
                     @Override
                     public void onSuccess(Object data) {
                         try {
@@ -227,7 +227,13 @@ public class HistoryFragment extends Fragment implements SwipeRefreshLayout.OnRe
                         }
                         prepopulateData(null, false);
                     }
-                });
+                };
+
+                if (mLock != null && mLock.isSensor()) {
+                    HistoryService.getInstance().sensorHistoryRequest(mLock.getId(), LIMIT, offset, historyResponseHandler);
+                } else {
+                    HistoryService.getInstance().serviceRequest(mLock.getId(), LIMIT, offset, historyResponseHandler);
+                }
             }
         } else {
             hideRefreshing();

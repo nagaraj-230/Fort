@@ -8,7 +8,7 @@ public class Sensors {
     @SerializedName("status")
     private String status;
 
-    @SerializedName("sensors")
+    @SerializedName(value = "data", alternate = {"sensors"})
     private ArrayList<Sensor> sensorList;
 
     public String getStatus() {

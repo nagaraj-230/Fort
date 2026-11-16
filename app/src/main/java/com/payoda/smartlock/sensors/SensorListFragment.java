@@ -5,6 +5,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -16,9 +17,15 @@ import com.google.gson.Gson;
 import com.payoda.smartlock.App;
 import com.payoda.smartlock.R;
 import com.payoda.smartlock.constants.Constant;
+import com.payoda.smartlock.constants.DoorSensorServiceUrl;
+import com.payoda.smartlock.plugins.network.ResponseHandler;
+import com.payoda.smartlock.plugins.network.ServiceManager;
 import com.payoda.smartlock.plugins.storage.SecuredStorageManager;
 import com.payoda.smartlock.sensors.adapter.SensorListAdapter;
 import com.payoda.smartlock.sensors.model.Sensor;
+import com.payoda.smartlock.sensors.model.Sensors;
+import com.payoda.smartlock.sensors.service.DoorSensorService;
+import com.payoda.smartlock.utils.AppDialog;
 
 import java.util.ArrayList;
 
@@ -72,7 +79,66 @@ public class SensorListFragment extends Fragment implements SwipeRefreshLayout.O
     }
 
     private void loadSensors() {
+        if (getContext() != null) {
+            Toast.makeText(getContext(), "[TEST ALERT] Door Sensor Base URL:\n" + DoorSensorServiceUrl.SENSOR_SERVICE_URL, Toast.LENGTH_LONG).show();
+        }
+
+        if (getContext() != null && ServiceManager.getInstance().isNetworkAvailable(getContext())) {
+            if (swipeRefreshLayout != null && !swipeRefreshLayout.isRefreshing()) {
+                swipeRefreshLayout.setRefreshing(true);
+            }
+            DoorSensorService.getInstance().getSensorList(100, 0, new ResponseHandler() {
+                @Override
+                public void onSuccess(Object data) {
+                    if (swipeRefreshLayout != null) {
+                        swipeRefreshLayout.setRefreshing(false);
+                    }
+                    if (getActivity() != null) {
+                        String url = String.format(DoorSensorServiceUrl.SENSOR_LIST, 100, 0);
+                        AppDialog.showAlertDialog(getActivity(), "Door Sensor API Check", "URL Hit:\n" + url + "\n\nResponse:\n" + (data != null ? data.toString() : "empty"));
+                    }
+                    if (data instanceof Sensors) {
+                        Sensors sensors = (Sensors) data;
+                        sensorList = sensors.getSensorList();
+                        SecuredStorageManager.getInstance().saveSensorList(sensorList);
+                    }
+                    renderSensorList();
+                }
+
+                @Override
+                public void onAuthError(String message) {
+                    if (swipeRefreshLayout != null) {
+                        swipeRefreshLayout.setRefreshing(false);
+                    }
+                    if (getActivity() != null) {
+                        AppDialog.showAlertDialog(getActivity(), "Door Sensor Auth Error", message);
+                    }
+                    fallbackToLocalStorage();
+                }
+
+                @Override
+                public void onError(String message) {
+                    if (swipeRefreshLayout != null) {
+                        swipeRefreshLayout.setRefreshing(false);
+                    }
+                    if (getActivity() != null) {
+                        String url = String.format(DoorSensorServiceUrl.SENSOR_LIST, 100, 0);
+                        AppDialog.showAlertDialog(getActivity(), "Door Sensor API Check", "URL Hit:\n" + url + "\n\nServer Error:\n" + message);
+                    }
+                    fallbackToLocalStorage();
+                }
+            });
+        } else {
+            fallbackToLocalStorage();
+        }
+    }
+
+    private void fallbackToLocalStorage() {
         sensorList = SecuredStorageManager.getInstance().getSensorList();
+        renderSensorList();
+    }
+
+    private void renderSensorList() {
         if (sensorList == null) {
             sensorList = new ArrayList<>();
         }
@@ -85,9 +151,6 @@ public class SensorListFragment extends Fragment implements SwipeRefreshLayout.O
             mRecyclerView.setVisibility(View.VISIBLE);
             adapter = new SensorListAdapter(sensorList, this);
             mRecyclerView.setAdapter(adapter);
-        }
-        if (swipeRefreshLayout != null && swipeRefreshLayout.isRefreshing()) {
-            swipeRefreshLayout.setRefreshing(false);
         }
     }
 

@@ -50,6 +50,7 @@ captures/
 app/*/release/
 
 # Documents and spreadsheets
+*.md
 *.pdf
 *.doc
 *.docx

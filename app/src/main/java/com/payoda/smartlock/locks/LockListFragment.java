@@ -195,7 +195,7 @@ public class LockListFragment extends Fragment implements ILockSelectCallback, S
             } else {
                 load_bottom_more_progress.setVisibility(View.VISIBLE);
             }
-            LockListService.getInstance().getLock(50, offset, new ResponseHandler() {
+            LockListService.getInstance().getLock(100, offset, new ResponseHandler() {
                 @Override
                 public void onSuccess(Object data) {
                     hideRefreshing();

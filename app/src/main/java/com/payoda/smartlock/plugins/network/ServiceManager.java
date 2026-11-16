@@ -332,11 +332,29 @@ public class ServiceManager {
 
             Logger.d("### URL ", url);
             //HttpsTrustManager.allowAllSSL();
-            String data = (object != null) ? new Gson().toJson(object) : null;
+            String data = null;
+            JSONObject payload = null;
+            if (object != null) {
+                if (object instanceof JSONObject) {
+                    payload = (JSONObject) object;
+                    data = payload.toString();
+                } else if (object instanceof String) {
+                    data = (String) object;
+                    try {
+                        payload = new JSONObject(data);
+                    } catch (Exception ignored) {
+                    }
+                } else {
+                    data = new Gson().toJson(object);
+                    try {
+                        payload = new JSONObject(data);
+                    } catch (Exception ignored) {
+                    }
+                }
+            }
             Logger.d("### Payloads ", data);
 
             try {
-                JSONObject payload = (data != null) ? new JSONObject(data) : null;
                 JsonObjectRequest request = new JsonObjectRequest(method, url, payload, response -> {
 
                     Logger.d("### Res URL ", url);

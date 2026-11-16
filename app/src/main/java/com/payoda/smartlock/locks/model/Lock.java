@@ -71,6 +71,17 @@ public class Lock implements Serializable {
     @SerializedName("enable_passage")
     private String enablePassage;
 
+    @androidx.room.Ignore
+    private boolean isSensor;
+
+    public boolean isSensor() {
+        return isSensor;
+    }
+
+    public void setSensor(boolean sensor) {
+        isSensor = sensor;
+    }
+
 
     public String getId() {
         return id;
