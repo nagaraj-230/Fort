@@ -17,7 +17,6 @@
         android:layout_below="@+id/header"
         android:layout_centerHorizontal="true"
         android:layout_marginTop="20dp"
-        android:drawableStart="@drawable/ic_grey_door"
         android:gravity="center"
         android:textAlignment="center"
         android:theme="@style/MediumText"
@@ -43,13 +42,47 @@
 
     </com.google.android.material.textfield.TextInputLayout>
 
+    <!-- Pre-Activation / Engage Container (Screenshot 1) -->
+    <LinearLayout
+        android:id="@+id/ll_sensor_engage_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:paddingBottom="50dp"
+        android:visibility="visible">
+
+        <TextView
+            android:id="@+id/tv_engage_sensor"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="25dp"
+            android:layout_marginRight="25dp"
+            android:textAlignment="center"
+            android:textColor="@color/white"
+            android:text="@string/engage_sensor_prompt"
+            android:theme="@style/MediumText" />
+
+        <ImageView
+            android:id="@+id/iv_engage"
+            android:layout_width="180dp"
+            android:layout_height="180dp"
+            android:layout_marginTop="20dp"
+            android:contentDescription="@string/app_name"
+            android:src="@drawable/sensor_wave" />
+
+    </LinearLayout>
+
+    <!-- Activated State Center Container (Hidden during Pre-Activation) -->
     <LinearLayout
         android:id="@+id/ll_sensor_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_centerInParent="true"
         android:gravity="center"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:visibility="gone">
 
         <ImageView
             android:id="@+id/iv_sensor_icon"
@@ -68,6 +101,7 @@
 
     </LinearLayout>
 
+    <!-- Bottom Container -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -75,69 +109,99 @@
         android:layout_marginBottom="20dp"
         android:orientation="vertical">
 
-        <LinearLayout
-            android:layout_width="match_parent"
+        <!-- Pre-Activation bottom label (Screenshot 1) -->
+        <TextView
+            android:id="@+id/tv_engage_to_proceed"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:gravity="center"
-            android:orientation="horizontal">
-
-            <Button
-                android:id="@+id/btn_sensor_history"
-                style="@style/LockDetailButton"
-                android:layout_gravity="top"
-                android:drawableTop="@mipmap/ic_history"
-                android:text="@string/iv_history"
-                android:visibility="visible" />
-        </LinearLayout>
+            android:layout_gravity="center"
+            android:textColor="@color/white"
+            android:theme="@style/MediumText"
+            android:text="@string/engage_sensor_to_proceed"
+            android:visibility="visible" />
 
         <View
+            android:id="@+id/divider_engage"
             style="@style/Divider"
             android:layout_marginBottom="10dp"
             android:layout_marginEnd="40dp"
             android:layout_marginStart="40dp"
-            android:layout_marginTop="20dp" />
+            android:layout_marginTop="20dp"
+            android:visibility="visible" />
 
-        <RelativeLayout
+        <!-- Activated Actions Container (Screenshot 3 - Hidden during Pre-Activation) -->
+        <LinearLayout
+            android:id="@+id/ll_sensor_actions_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="30dp"
-            android:layout_marginStart="30dp">
+            android:orientation="vertical"
+            android:visibility="gone">
 
-            <TextView
-                android:id="@+id/lblBatteryLabel"
-                style="@style/MediumText"
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginLeft="5dp"
-                android:textColor="@color/dark_gray"
-                android:text="@string/sensor_battery"
-                android:visibility="visible"/>
-
-            <TextView
-                android:id="@+id/tv_sensor_battery"
-                style="@style/MediumText"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:drawableStart="@mipmap/ic_battery_full"
                 android:gravity="center"
-                android:textColor="@color/dark_gray"
-                android:layout_below="@id/lblBatteryLabel"
-                android:visibility="visible"/>
+                android:orientation="horizontal">
 
-            <TextView
-                android:id="@+id/tv_factory_reset"
-                style="@style/MediumText"
-                android:layout_width="wrap_content"
+                <Button
+                    android:id="@+id/btn_sensor_history"
+                    style="@style/LockDetailButton"
+                    android:layout_gravity="top"
+                    android:drawableTop="@mipmap/ic_history"
+                    android:text="@string/iv_history"
+                    android:visibility="visible" />
+            </LinearLayout>
+
+            <View
+                style="@style/Divider"
+                android:layout_marginBottom="10dp"
+                android:layout_marginEnd="40dp"
+                android:layout_marginStart="40dp"
+                android:layout_marginTop="20dp" />
+
+            <RelativeLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_alignParentEnd="true"
-                android:drawableStart="@mipmap/ic_factory_reset"
-                android:gravity="center"
-                android:text="@string/factory_reset"
-                android:textColor="@color/dark_gray"
-                android:layout_below="@id/lblBatteryLabel"
-                android:visibility="visible"/>
+                android:layout_marginEnd="30dp"
+                android:layout_marginStart="30dp">
 
-        </RelativeLayout>
+                <TextView
+                    android:id="@+id/lblBatteryLabel"
+                    style="@style/MediumText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="5dp"
+                    android:textColor="@color/dark_gray"
+                    android:text="@string/sensor_battery"
+                    android:visibility="visible"/>
+
+                <TextView
+                    android:id="@+id/tv_sensor_battery"
+                    style="@style/MediumText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:drawableStart="@mipmap/ic_battery_full"
+                    android:gravity="center"
+                    android:textColor="@color/dark_gray"
+                    android:layout_below="@id/lblBatteryLabel"
+                    android:visibility="visible"/>
+
+                <TextView
+                    android:id="@+id/tv_factory_reset"
+                    style="@style/MediumText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:drawableStart="@mipmap/ic_factory_reset"
+                    android:gravity="center"
+                    android:text="@string/factory_reset"
+                    android:textColor="@color/dark_gray"
+                    android:layout_below="@id/lblBatteryLabel"
+                    android:visibility="visible"/>
+
+            </RelativeLayout>
+
+        </LinearLayout>
 
     </LinearLayout>
 

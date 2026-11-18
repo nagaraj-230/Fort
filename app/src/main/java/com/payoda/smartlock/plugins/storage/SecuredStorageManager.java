@@ -38,6 +38,9 @@ import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.HashMap;
+
+import org.json.JSONObject;
 
 import javax.crypto.Cipher;
 import javax.crypto.spec.IvParameterSpec;
@@ -856,10 +859,50 @@ public class SecuredStorageManager {
         return new ArrayList<>();
     }
 
+    private static final String SENSOR_OWNER_ID_MAP = "sensor_owner_id_map";
+
     public void saveSensorList(ArrayList<Sensor> sensorList) {
+        if (sensorList == null) {
+            sensorList = new ArrayList<>();
+        }
+        // Preserve locally stored fields (ownerId, scratchCode) across server list sync
+        ArrayList<Sensor> existingList = getSensorList();
+        HashMap<String, Sensor> existingMap = new HashMap<>();
+        for (Sensor s : existingList) {
+            if (!TextUtils.isEmpty(s.getId())) existingMap.put(s.getId(), s);
+            if (!TextUtils.isEmpty(s.getSerialNumber())) existingMap.put(s.getSerialNumber(), s);
+            if (!TextUtils.isEmpty(s.getCode())) existingMap.put(s.getCode(), s);
+        }
+
+        for (Sensor s : sensorList) {
+            Sensor existing = null;
+            if (!TextUtils.isEmpty(s.getId())) existing = existingMap.get(s.getId());
+            if (existing == null && !TextUtils.isEmpty(s.getSerialNumber())) existing = existingMap.get(s.getSerialNumber());
+            if (existing == null && !TextUtils.isEmpty(s.getCode())) existing = existingMap.get(s.getCode());
+
+            if (existing != null) {
+                if (TextUtils.isEmpty(s.getOwnerId()) && !TextUtils.isEmpty(existing.getOwnerId())) {
+                    s.setOwnerId(existing.getOwnerId());
+                }
+                if (TextUtils.isEmpty(s.getScratchCode()) && !TextUtils.isEmpty(existing.getScratchCode())) {
+                    s.setScratchCode(existing.getScratchCode());
+                }
+            }
+
+            if (TextUtils.isEmpty(s.getOwnerId())) {
+                String cachedOwnerId = getSensorOwnerId(s.getId());
+                if (TextUtils.isEmpty(cachedOwnerId)) {
+                    cachedOwnerId = getSensorOwnerId(s.getSerialNumber());
+                }
+                if (!TextUtils.isEmpty(cachedOwnerId)) {
+                    s.setOwnerId(cachedOwnerId);
+                }
+            }
+        }
+
         Sensors sensors = new Sensors();
         sensors.setStatus("success");
-        sensors.setSensorList(sensorList != null ? sensorList : new ArrayList<>());
+        sensors.setSensorList(sensorList);
         putString("sensors", new Gson().toJson(sensors));
     }
 
@@ -878,6 +921,99 @@ public class SecuredStorageManager {
             list.add(sensor);
         }
         saveSensorList(list);
+    }
+
+    public void deleteSensor(String sensorId) {
+        if (TextUtils.isEmpty(sensorId)) return;
+        ArrayList<Sensor> list = getSensorList();
+        String serialNumber = null;
+        String code = null;
+        for (int i = 0; i < list.size(); i++) {
+            Sensor s = list.get(i);
+            if (s.getId() != null && s.getId().equalsIgnoreCase(sensorId)) {
+                serialNumber = s.getSerialNumber();
+                code = s.getCode();
+                list.remove(i);
+                break;
+            }
+        }
+        saveSensorList(list);
+        removeSensorOwnerId(sensorId, serialNumber, code);
+    }
+
+    public void removeSensorOwnerId(String... keys) {
+        if (keys == null || keys.length == 0) return;
+        try {
+            String mapJson = getString(SENSOR_OWNER_ID_MAP, "");
+            if (!TextUtils.isEmpty(mapJson)) {
+                JSONObject mapObj = new JSONObject(mapJson);
+                boolean changed = false;
+                for (String key : keys) {
+                    if (!TextUtils.isEmpty(key) && mapObj.has(key)) {
+                        mapObj.remove(key);
+                        changed = true;
+                    }
+                }
+                if (changed) {
+                    putString(SENSOR_OWNER_ID_MAP, mapObj.toString());
+                }
+            }
+        } catch (Exception e) {
+            Logger.e(e);
+        }
+    }
+
+    public void updateSensorOwnerId(String sensorIdOrSerial, String ownerId) {
+        if (TextUtils.isEmpty(sensorIdOrSerial) || TextUtils.isEmpty(ownerId)) return;
+        try {
+            String mapJson = getString(SENSOR_OWNER_ID_MAP, "");
+            JSONObject mapObj = !TextUtils.isEmpty(mapJson) ? new JSONObject(mapJson) : new JSONObject();
+            mapObj.put(sensorIdOrSerial, ownerId);
+            putString(SENSOR_OWNER_ID_MAP, mapObj.toString());
+        } catch (Exception e) {
+            Logger.e(e);
+        }
+
+        ArrayList<Sensor> list = getSensorList();
+        for (int i = 0; i < list.size(); i++) {
+            Sensor s = list.get(i);
+            if ((s.getId() != null && s.getId().equalsIgnoreCase(sensorIdOrSerial)) ||
+                    (s.getSerialNumber() != null && s.getSerialNumber().equalsIgnoreCase(sensorIdOrSerial)) ||
+                    (s.getCode() != null && s.getCode().equalsIgnoreCase(sensorIdOrSerial))) {
+                s.setOwnerId(ownerId);
+                break;
+            }
+        }
+        Sensors sensors = new Sensors();
+        sensors.setStatus("success");
+        sensors.setSensorList(list);
+        putString("sensors", new Gson().toJson(sensors));
+    }
+
+    public String getSensorOwnerId(String sensorIdOrSerial) {
+        if (TextUtils.isEmpty(sensorIdOrSerial)) return null;
+        ArrayList<Sensor> list = getSensorList();
+        for (Sensor s : list) {
+            if ((s.getId() != null && s.getId().equalsIgnoreCase(sensorIdOrSerial)) ||
+                    (s.getSerialNumber() != null && s.getSerialNumber().equalsIgnoreCase(sensorIdOrSerial)) ||
+                    (s.getCode() != null && s.getCode().equalsIgnoreCase(sensorIdOrSerial))) {
+                if (!TextUtils.isEmpty(s.getOwnerId())) {
+                    return s.getOwnerId();
+                }
+            }
+        }
+        try {
+            String mapJson = getString(SENSOR_OWNER_ID_MAP, "");
+            if (!TextUtils.isEmpty(mapJson)) {
+                JSONObject mapObj = new JSONObject(mapJson);
+                if (mapObj.has(sensorIdOrSerial)) {
+                    return mapObj.getString(sensorIdOrSerial);
+                }
+            }
+        } catch (Exception e) {
+            Logger.e(e);
+        }
+        return null;
     }
 
 }

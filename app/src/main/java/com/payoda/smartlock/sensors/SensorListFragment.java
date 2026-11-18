@@ -28,6 +28,8 @@ import com.payoda.smartlock.sensors.service.DoorSensorService;
 import com.payoda.smartlock.utils.AppDialog;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import android.text.TextUtils;
 
 public class SensorListFragment extends Fragment implements SwipeRefreshLayout.OnRefreshListener, SensorListAdapter.ISensorSelectCallback {
 
@@ -80,7 +82,7 @@ public class SensorListFragment extends Fragment implements SwipeRefreshLayout.O
 
     private void loadSensors() {
         if (getContext() != null) {
-            Toast.makeText(getContext(), "[TEST ALERT] Door Sensor Base URL:\n" + DoorSensorServiceUrl.SENSOR_SERVICE_URL, Toast.LENGTH_LONG).show();
+            Toast.makeText(getContext(), "[TEST ALERT] Door Sensor Base URL:\n" + DoorSensorServiceUrl.DOOR_SENSOR_SERVICE_URL, Toast.LENGTH_LONG).show();
         }
 
         if (getContext() != null && ServiceManager.getInstance().isNetworkAvailable(getContext())) {
@@ -94,13 +96,64 @@ public class SensorListFragment extends Fragment implements SwipeRefreshLayout.O
                         swipeRefreshLayout.setRefreshing(false);
                     }
                     if (getActivity() != null) {
-                        String url = String.format(DoorSensorServiceUrl.SENSOR_LIST, 100, 0);
+                        String url = String.format(DoorSensorServiceUrl.WIFI_DOOR_SENSOR_LIST, 100, 0);
                         AppDialog.showAlertDialog(getActivity(), "Door Sensor API Check", "URL Hit:\n" + url + "\n\nResponse:\n" + (data != null ? data.toString() : "empty"));
                     }
                     if (data instanceof Sensors) {
                         Sensors sensors = (Sensors) data;
-                        sensorList = sensors.getSensorList();
-                        SecuredStorageManager.getInstance().saveSensorList(sensorList);
+                        ArrayList<Sensor> newSensors = sensors.getSensorList();
+                        ArrayList<Sensor> cachedSensors = SecuredStorageManager.getInstance().getSensorList();
+                        HashMap<String, Sensor> cachedMap = new HashMap<>();
+                        if (cachedSensors != null) {
+                            for (Sensor s : cachedSensors) {
+                                if (!TextUtils.isEmpty(s.getId())) cachedMap.put(s.getId(), s);
+                                if (!TextUtils.isEmpty(s.getSerialNumber())) cachedMap.put(s.getSerialNumber(), s);
+                                if (!TextUtils.isEmpty(s.getCode())) cachedMap.put(s.getCode(), s);
+                            }
+                        }
+
+                        if (newSensors != null) {
+                            for (Sensor s : newSensors) {
+                                Sensor cached = null;
+                                if (!TextUtils.isEmpty(s.getId())) cached = cachedMap.get(s.getId());
+                                if (cached == null && !TextUtils.isEmpty(s.getSerialNumber())) cached = cachedMap.get(s.getSerialNumber());
+                                if (cached == null && !TextUtils.isEmpty(s.getCode())) cached = cachedMap.get(s.getCode());
+
+                                String savedOwnerId = null;
+                                if (cached != null && !TextUtils.isEmpty(cached.getOwnerId())) {
+                                    savedOwnerId = cached.getOwnerId();
+                                }
+                                if (TextUtils.isEmpty(savedOwnerId) && !TextUtils.isEmpty(s.getId())) {
+                                    savedOwnerId = SecuredStorageManager.getInstance().getSensorOwnerId(s.getId());
+                                }
+                                if (TextUtils.isEmpty(savedOwnerId) && !TextUtils.isEmpty(s.getSerialNumber())) {
+                                    savedOwnerId = SecuredStorageManager.getInstance().getSensorOwnerId(s.getSerialNumber());
+                                }
+                                if (TextUtils.isEmpty(savedOwnerId) && !TextUtils.isEmpty(s.getCode())) {
+                                    savedOwnerId = SecuredStorageManager.getInstance().getSensorOwnerId(s.getCode());
+                                }
+
+                                if (!TextUtils.isEmpty(savedOwnerId)) {
+                                    s.setOwnerId(savedOwnerId);
+                                    if (cached != null && !TextUtils.isEmpty(cached.getStatus())) {
+                                        s.setStatus(cached.getStatus());
+                                    } else {
+                                        s.setStatus(Constant.ACTIVE);
+                                    }
+                                } else {
+                                    // No owner-id on this device yet: sensor must undergo Pre-Activation
+                                    s.setStatus(Constant.TRANSFER);
+                                }
+
+                                if (cached != null) {
+                                    if (TextUtils.isEmpty(s.getScratchCode()) && !TextUtils.isEmpty(cached.getScratchCode())) {
+                                        s.setScratchCode(cached.getScratchCode());
+                                    }
+                                }
+                            }
+                            sensorList = newSensors;
+                            SecuredStorageManager.getInstance().saveSensorList(sensorList);
+                        }
                     }
                     renderSensorList();
                 }
@@ -122,7 +175,7 @@ public class SensorListFragment extends Fragment implements SwipeRefreshLayout.O
                         swipeRefreshLayout.setRefreshing(false);
                     }
                     if (getActivity() != null) {
-                        String url = String.format(DoorSensorServiceUrl.SENSOR_LIST, 100, 0);
+                        String url = String.format(DoorSensorServiceUrl.WIFI_DOOR_SENSOR_LIST, 100, 0);
                         AppDialog.showAlertDialog(getActivity(), "Door Sensor API Check", "URL Hit:\n" + url + "\n\nServer Error:\n" + message);
                     }
                     fallbackToLocalStorage();

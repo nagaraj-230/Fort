@@ -1,6 +1,9 @@
 package com.payoda.smartlock.sensors;
 
+import android.content.DialogInterface;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -8,24 +11,34 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+
 import com.google.gson.Gson;
 import com.payoda.smartlock.App;
 import com.payoda.smartlock.R;
 import com.payoda.smartlock.authentication.BaseFragment;
 import com.payoda.smartlock.constants.Constant;
+import com.payoda.smartlock.constants.DoorSensorServiceUrl;
+import com.payoda.smartlock.locks.LockManager;
 import com.payoda.smartlock.locks.model.Lock;
 import com.payoda.smartlock.plugins.network.ResponseHandler;
+import com.payoda.smartlock.plugins.network.ServiceManager;
 import com.payoda.smartlock.plugins.storage.SecuredStorageManager;
+import com.payoda.smartlock.plugins.wifi.WifiUtilManager;
 import com.payoda.smartlock.sensors.model.Sensor;
 import com.payoda.smartlock.sensors.service.DoorSensorService;
 import com.payoda.smartlock.utils.AppDialog;
+import com.payoda.smartlock.utils.Loader;
 import com.payoda.smartlock.utils.Logger;
 
 import org.json.JSONObject;
+
+import java.util.ArrayList;
 
 public class SensorDetailFragment extends BaseFragment {
 
@@ -36,6 +49,15 @@ public class SensorDetailFragment extends BaseFragment {
     private EditText etSensorTitle;
     private ImageView ivEdit, ivSave, ivSettings;
     private Button btnSensorHistory;
+
+    // Pre-Activation & Lifecycle Views
+    private LinearLayout llSensorEngageContainer;
+    private TextView tvEngageSensor;
+    private ImageView ivEngage;
+    private TextView tvEngageToProceed;
+    private View dividerEngage;
+    private LinearLayout llSensorContainer;
+    private LinearLayout llSensorActionsContainer;
 
     public SensorDetailFragment() {
         // Required empty public constructor
@@ -65,6 +87,38 @@ public class SensorDetailFragment extends BaseFragment {
         return view;
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        refreshSensorFromStorage();
+        updateUI();
+    }
+
+    private void refreshSensorFromStorage() {
+        if (mSensor == null) return;
+        ArrayList<Sensor> list = SecuredStorageManager.getInstance().getSensorList();
+        for (Sensor s : list) {
+            if ((s.getId() != null && s.getId().equalsIgnoreCase(mSensor.getId())) ||
+                    (s.getSerialNumber() != null && s.getSerialNumber().equalsIgnoreCase(mSensor.getSerialNumber())) ||
+                    (s.getCode() != null && s.getCode().equalsIgnoreCase(mSensor.getCode()))) {
+                mSensor = s;
+                break;
+            }
+        }
+        if (mSensor != null && TextUtils.isEmpty(mSensor.getOwnerId())) {
+            String ownerId = SecuredStorageManager.getInstance().getSensorOwnerId(mSensor.getId());
+            if (TextUtils.isEmpty(ownerId)) {
+                ownerId = SecuredStorageManager.getInstance().getSensorOwnerId(mSensor.getSerialNumber());
+            }
+            if (TextUtils.isEmpty(ownerId)) {
+                ownerId = SecuredStorageManager.getInstance().getSensorOwnerId(mSensor.getCode());
+            }
+            if (!TextUtils.isEmpty(ownerId)) {
+                mSensor.setOwnerId(ownerId);
+            }
+        }
+    }
+
     private void initView(View view) {
         ((TextView) view.findViewById(R.id.tv_title)).setText(getString(R.string.sensor_details));
 
@@ -85,15 +139,20 @@ public class SensorDetailFragment extends BaseFragment {
         ivSettings = view.findViewById(R.id.iv_settings);
         btnSensorHistory = view.findViewById(R.id.btn_sensor_history);
 
-        if (mSensor != null) {
-            tvSensorTitle.setText(mSensor.getName());
-            etSensorTitle.setText(mSensor.getName());
-            tvSensorCodeDisplay.setText("Sensor Code: " + mSensor.getCode());
-            tvBattery.setText(mSensor.getBattery() + "%");
+        // Pre-Activation Views
+        llSensorEngageContainer = view.findViewById(R.id.ll_sensor_engage_container);
+        tvEngageSensor = view.findViewById(R.id.tv_engage_sensor);
+        ivEngage = view.findViewById(R.id.iv_engage);
+        tvEngageToProceed = view.findViewById(R.id.tv_engage_to_proceed);
+        dividerEngage = view.findViewById(R.id.divider_engage);
+        llSensorContainer = view.findViewById(R.id.ll_sensor_container);
+        llSensorActionsContainer = view.findViewById(R.id.ll_sensor_actions_container);
+
+        if (ivEngage != null) {
+            ivEngage.setOnClickListener(v -> handleEngageSensorClick());
         }
 
         if (ivEdit != null) {
-            ivEdit.setVisibility(View.VISIBLE);
             ivEdit.setOnClickListener(v -> {
                 ivEdit.setVisibility(View.GONE);
                 if (ivSave != null) ivSave.setVisibility(View.VISIBLE);
@@ -118,13 +177,30 @@ public class SensorDetailFragment extends BaseFragment {
                                 @Override
                                 public void onSuccess(Object data) {
                                     Logger.d(TAG, "Sensor name updated on server: " + data);
+                                    if (getActivity() != null) {
+                                        String alertMsg = "TARGET URL:\n" + DoorSensorServiceUrl.UPDATE_DOOR_SENSOR + mSensor.getId() + "\n\n"
+                                                + "PAYLOAD SENT:\n" + payload.toString() + "\n\n"
+                                                + "SERVER RESPONSE:\n" + (data != null ? data.toString() : "empty");
+                                        AppDialog.showAlertDialog(getActivity(), "[TEST ALERT] Rename Sensor API Response", alertMsg);
+                                    }
                                 }
 
                                 @Override
-                                public void onAuthError(String message) {}
+                                public void onAuthError(String message) {
+                                    if (getActivity() != null) {
+                                        AppDialog.showAlertDialog(getActivity(), "[TEST ALERT] Rename Sensor Auth Error", message);
+                                    }
+                                }
 
                                 @Override
-                                public void onError(String message) {}
+                                public void onError(String message) {
+                                    if (getActivity() != null) {
+                                        String alertMsg = "TARGET URL:\n" + DoorSensorServiceUrl.UPDATE_DOOR_SENSOR + mSensor.getId() + "\n\n"
+                                                + "PAYLOAD SENT:\n" + payload.toString() + "\n\n"
+                                                + "ERROR:\n" + message;
+                                        AppDialog.showAlertDialog(getActivity(), "[TEST ALERT] Rename Sensor Error", alertMsg);
+                                    }
+                                }
                             });
                         } catch (Exception e) {
                             Logger.e(e);
@@ -141,7 +217,6 @@ public class SensorDetailFragment extends BaseFragment {
         }
 
         if (ivSettings != null) {
-            ivSettings.setVisibility(View.VISIBLE);
             ivSettings.setOnClickListener(v -> {
                 if (mSensor != null && getActivity() != null) {
                     Lock sensorAsLock = new Lock();
@@ -169,7 +244,413 @@ public class SensorDetailFragment extends BaseFragment {
         }
 
         if (tvFactoryReset != null) {
-            tvFactoryReset.setOnClickListener(v -> AppDialog.showAlertDialog(getContext(), "Factory Reset", "Sensor reset successfully."));
+            tvFactoryReset.setOnClickListener(v -> performFactoryReset());
         }
+
+        updateUI();
+    }
+
+    private void updateUI() {
+        if (mSensor == null) return;
+
+        if (tvSensorTitle != null) tvSensorTitle.setText(mSensor.getName());
+        if (etSensorTitle != null) etSensorTitle.setText(mSensor.getName());
+        if (tvSensorCodeDisplay != null) {
+            String code = mSensor.getSerialNumber() != null ? mSensor.getSerialNumber() : mSensor.getCode();
+            tvSensorCodeDisplay.setText("Sensor Code: " + (code != null ? code : ""));
+        }
+
+        updateBattery();
+
+        String ownerId = mSensor.getOwnerId();
+        if (TextUtils.isEmpty(ownerId)) {
+            ownerId = SecuredStorageManager.getInstance().getSensorOwnerId(mSensor.getId());
+        }
+        if (TextUtils.isEmpty(ownerId)) {
+            ownerId = SecuredStorageManager.getInstance().getSensorOwnerId(mSensor.getSerialNumber());
+        }
+        if (TextUtils.isEmpty(ownerId)) {
+            ownerId = SecuredStorageManager.getInstance().getSensorOwnerId(mSensor.getCode());
+        }
+
+        boolean isActivated = !TextUtils.isEmpty(ownerId) && mSensor.getStatus() != null && mSensor.getStatus().equalsIgnoreCase(Constant.ACTIVE);
+
+        if (!isActivated) {
+            // Pre-Activation State (Screenshot 1)
+            if (llSensorEngageContainer != null) llSensorEngageContainer.setVisibility(View.VISIBLE);
+            if (tvEngageToProceed != null) tvEngageToProceed.setVisibility(View.VISIBLE);
+            if (dividerEngage != null) dividerEngage.setVisibility(View.VISIBLE);
+            if (llSensorContainer != null) llSensorContainer.setVisibility(View.GONE);
+            if (llSensorActionsContainer != null) llSensorActionsContainer.setVisibility(View.GONE);
+
+            // Hide header controls until activated
+            if (ivEdit != null) ivEdit.setVisibility(View.GONE);
+            if (ivSettings != null) ivSettings.setVisibility(View.GONE);
+            if (ivSave != null) ivSave.setVisibility(View.GONE);
+
+        } else {
+            // Activated State (Screenshot 3)
+            if (llSensorEngageContainer != null) llSensorEngageContainer.setVisibility(View.GONE);
+            if (tvEngageToProceed != null) tvEngageToProceed.setVisibility(View.GONE);
+            if (dividerEngage != null) dividerEngage.setVisibility(View.GONE);
+            if (llSensorContainer != null) llSensorContainer.setVisibility(View.VISIBLE);
+            if (llSensorActionsContainer != null) llSensorActionsContainer.setVisibility(View.VISIBLE);
+
+            // Show header controls
+            if (ivEdit != null) ivEdit.setVisibility(View.VISIBLE);
+            if (ivSettings != null) ivSettings.setVisibility(View.VISIBLE);
+            if (ivSave != null) ivSave.setVisibility(View.GONE);
+        }
+    }
+
+    private void updateBattery() {
+        if (mSensor == null || tvBattery == null) return;
+        int batteryPercent = 100;
+        try {
+            if (!TextUtils.isEmpty(mSensor.getBattery())) {
+                batteryPercent = Integer.parseInt(mSensor.getBattery().trim());
+            }
+        } catch (Exception e) {
+            batteryPercent = 100;
+        }
+
+        tvBattery.setText(batteryPercent + "%");
+
+        if (batteryPercent <= 20) {
+            tvBattery.setCompoundDrawablesWithIntrinsicBounds(R.mipmap.ic_battery_empty, 0, 0, 0);
+        } else if (batteryPercent <= 50) {
+            tvBattery.setCompoundDrawablesWithIntrinsicBounds(R.mipmap.ic_battery_half, 0, 0, 0);
+        } else {
+            tvBattery.setCompoundDrawablesWithIntrinsicBounds(R.mipmap.ic_battery_full, 0, 0, 0);
+        }
+    }
+
+    private void handleEngageSensorClick() {
+        if (getActivity() == null || mSensor == null) return;
+
+        // Step 1: Pre-flight check for Location & Wi-Fi (Triggers Screenshot 2 dialog if Location is disabled)
+        String status = LockManager.getInstance().preCheckBLEVersion6(getActivity());
+        if (!status.equalsIgnoreCase("success")) {
+            AppDialog.showAlertDialog(getActivity(), status);
+            return;
+        }
+
+        // Step 2: Show Activate Dialog matching Lock UX
+        AppDialog.showAlertDialog(getContext(), getString(R.string.activate_sensor), getString(R.string.engage_sensor_prompt),
+                "OK", (dialog, which) -> {
+                    getLocationPermission(new RequestPermissionAction() {
+                        @Override
+                        public void permissionGranted() {
+                            doActivateSensor();
+                        }
+
+                        @Override
+                        public void permissionDenied() {
+                        }
+                    });
+                },
+                "CANCEL", (dialog, which) -> {});
+    }
+
+    private void doActivateSensor() {
+        if (mSensor == null || getContext() == null) return;
+        Loader.getInstance().showLoader(getContext());
+
+        String SSID = mSensor.getSerialNumber() != null ? mSensor.getSerialNumber() : mSensor.getCode();
+        String password = mSensor.getScratchCode();
+        if (password != null && password.length() > 8) {
+            password = password.substring(0, 8);
+        }
+
+        WifiUtilManager wifiUtilManager = new WifiUtilManager(getContext(), new WifiUtilManager.WifiListener() {
+            @Override
+            public void connectionSuccess() {
+                Logger.d(TAG, "Sensor connected for Activation");
+                new Handler(Looper.getMainLooper()).postDelayed(() -> doSensorAddRequest(), Constant.WIFI_DELAY_TIME);
+            }
+
+            @Override
+            public void connectionTimeOut() {
+                Loader.getInstance().hideLoader();
+                AppDialog.showAlertDialog(getActivity(), "Sensor connection timeout. Please ensure the sensor button was held for 3 seconds.");
+            }
+        });
+        wifiUtilManager.startScanning("", SSID, password);
+    }
+
+    private void doSensorAddRequest() {
+        JSONObject payload = new JSONObject();
+        final String deviceCode = mSensor.getSerialNumber() != null ? mSensor.getSerialNumber() : mSensor.getCode();
+        try {
+            payload.put("device-code", deviceCode);
+        } catch (Exception e) {
+            Logger.e(e);
+        }
+
+        Logger.d(TAG, "Posting to /add for activation with device-code: " + deviceCode);
+        ServiceManager.getInstance().post(DoorSensorServiceUrl.WIFI_DOOR_SENSOR_ADD, payload, new ResponseHandler() {
+            @Override
+            public void onSuccess(Object data) {
+                Logger.d(TAG, "Sensor /add success: " + data);
+                String ownerId = "";
+                int errorCode = 0;
+                String errorMsg = "";
+                try {
+                    if (data != null) {
+                        JSONObject res = new JSONObject(data.toString());
+                        errorCode = res.has("error-code") ? res.optInt("error-code", 0) : res.optInt("error", 0);
+                        errorMsg = res.has("error-message") ? res.optString("error-message", "") : res.optString("message", "");
+                        JSONObject respObj = res.optJSONObject("response");
+                        if (respObj != null) {
+                            ownerId = respObj.optString("owner-id", "");
+                        }
+                    }
+                } catch (Exception e) {
+                    Logger.e(e);
+                }
+
+                if (TextUtils.isEmpty(ownerId)) {
+                    if (errorCode == 1007 || (errorMsg != null && errorMsg.toLowerCase().contains("already added"))) {
+                        String savedOwnerId = SecuredStorageManager.getInstance().getSensorOwnerId(mSensor.getId());
+                        if (TextUtils.isEmpty(savedOwnerId)) {
+                            savedOwnerId = SecuredStorageManager.getInstance().getSensorOwnerId(deviceCode);
+                        }
+                        if (!TextUtils.isEmpty(savedOwnerId)) {
+                            ownerId = savedOwnerId;
+                        }
+                    }
+                }
+
+                if (TextUtils.isEmpty(ownerId)) {
+                    Loader.getInstance().hideLoader();
+                    forgetSensorHotspot();
+                    AppDialog.showAlertDialog(getActivity(), "Activation Failed", "No valid owner-id received from sensor.");
+                    return;
+                }
+
+                // 1. Save owner-id
+                if (mSensor.getId() != null) {
+                    SecuredStorageManager.getInstance().updateSensorOwnerId(mSensor.getId(), ownerId);
+                }
+                if (!TextUtils.isEmpty(deviceCode)) {
+                    SecuredStorageManager.getInstance().updateSensorOwnerId(deviceCode, ownerId);
+                }
+                mSensor.setOwnerId(ownerId);
+
+                // 2. Set Activated status
+                mSensor.setStatus(Constant.ACTIVE);
+                SecuredStorageManager.getInstance().addSensor(mSensor);
+
+                // 3. Disconnect from Sensor AP
+                forgetSensorHotspot();
+
+                // 4. Best-effort server sync
+                if (mSensor.getId() != null && getContext() != null && ServiceManager.getInstance().isNetworkAvailable(getContext())) {
+                    try {
+                        JSONObject updatePayload = new JSONObject();
+                        updatePayload.put("status", Constant.ACTIVE);
+                        DoorSensorService.getInstance().updateSensorName(mSensor.getId(), updatePayload, null);
+                    } catch (Exception ignored) {}
+                }
+
+                Loader.getInstance().hideLoader();
+                if (getActivity() != null) {
+                    String alertMsg = "TARGET URL:\n" + DoorSensorServiceUrl.WIFI_DOOR_SENSOR_ADD + "\n\n"
+                            + "RESPONSE:\n" + (data != null ? data.toString() : "empty") + "\n\n"
+                            + "OWNER-ID: " + ownerId + "\n\n"
+                            + "Sensor Activated Successfully!";
+                    AppDialog.showAlertDialog(getActivity(), "[TEST ALERT] Sensor Activation Success", alertMsg, (dialog, which) -> {
+                        updateUI();
+                    });
+                } else {
+                    updateUI();
+                }
+            }
+
+            @Override
+            public void onAuthError(String message) {
+                Logger.d(TAG, "Sensor /add onAuthError: " + message);
+                handleActivationError(deviceCode, message);
+            }
+
+            @Override
+            public void onError(String message) {
+                Logger.d(TAG, "Sensor /add onError: " + message);
+                handleActivationError(deviceCode, message);
+            }
+        });
+    }
+
+    private void handleActivationError(String deviceCode, String message) {
+        boolean isAlreadyAdded = message != null && (message.contains("1007") || message.toLowerCase().contains("already added"));
+        if (isAlreadyAdded) {
+            String savedOwnerId = SecuredStorageManager.getInstance().getSensorOwnerId(mSensor.getId());
+            if (TextUtils.isEmpty(savedOwnerId)) {
+                savedOwnerId = SecuredStorageManager.getInstance().getSensorOwnerId(deviceCode);
+            }
+            if (!TextUtils.isEmpty(savedOwnerId)) {
+                mSensor.setOwnerId(savedOwnerId);
+                mSensor.setStatus(Constant.ACTIVE);
+                SecuredStorageManager.getInstance().addSensor(mSensor);
+                forgetSensorHotspot();
+                Loader.getInstance().hideLoader();
+                if (getActivity() != null) {
+                    AppDialog.showAlertDialog(getActivity(), "[TEST ALERT] Sensor Already Registered",
+                            "Sensor was already paired on hardware (Error 1007). Activated using saved owner-id: " + savedOwnerId,
+                            (dialog, which) -> updateUI());
+                } else {
+                    updateUI();
+                }
+                return;
+            }
+        }
+        Loader.getInstance().hideLoader();
+        forgetSensorHotspot();
+        AppDialog.showAlertDialog(getActivity(), "Activation Failed", "Error: " + message);
+    }
+
+    private void forgetSensorHotspot() {
+        if (mSensor == null || getContext() == null) return;
+        String SSID = mSensor.getSerialNumber() != null ? mSensor.getSerialNumber() : mSensor.getCode();
+        WifiUtilManager.forgetMyNetwork(getContext(), SSID);
+    }
+
+    private void performFactoryReset() {
+        if (mSensor == null || getContext() == null) return;
+
+        AppDialog.showAlertDialog(getActivity(), "Factory Reset Sensor",
+                "Please hold the sensor button for 3 seconds until it enters configuration mode, then click \"Reset\".",
+                "Reset", (dialog, which) -> {
+                    Loader.getInstance().showLoader(getContext());
+
+                    String SSID = mSensor.getSerialNumber() != null ? mSensor.getSerialNumber() : mSensor.getCode();
+                    String password = mSensor.getScratchCode();
+                    if (password != null && password.length() > 8) {
+                        password = password.substring(0, 8);
+                    }
+
+                    WifiUtilManager wifiUtilManager = new WifiUtilManager(getContext(), new WifiUtilManager.WifiListener() {
+                        @Override
+                        public void connectionSuccess() {
+                            Logger.d(TAG, "Sensor Wi-Fi connected for Reset");
+                            new Handler(Looper.getMainLooper()).postDelayed(() -> doSensorResetRequest(), Constant.WIFI_DELAY_TIME);
+                        }
+
+                        @Override
+                        public void connectionTimeOut() {
+                            Loader.getInstance().hideLoader();
+                            AppDialog.showAlertDialog(getActivity(), "Sensor connection timeout. Please ensure the sensor is in configuration mode.");
+                        }
+                    });
+                    wifiUtilManager.startScanning("", SSID, password);
+                },
+                "Cancel", (dialog, which) -> {});
+    }
+
+    private void doSensorResetRequest() {
+        JSONObject payload = new JSONObject();
+        try {
+            String deviceCode = mSensor.getSerialNumber() != null ? mSensor.getSerialNumber() : mSensor.getCode();
+            payload.put("device-code", deviceCode);
+        } catch (Exception e) {
+            Logger.e(e);
+        }
+
+        Logger.d(TAG, "Posting to /reset-device with payload: " + payload.toString());
+        ServiceManager.getInstance().post(DoorSensorServiceUrl.WIFI_DOOR_SENSOR_RESET, payload, new ResponseHandler() {
+            @Override
+            public void onSuccess(Object data) {
+                Logger.d(TAG, "Sensor reset success: " + data);
+                forgetSensorHotspot();
+
+                if (mSensor.getId() != null && getContext() != null && ServiceManager.getInstance().isNetworkAvailable(getContext())) {
+                    DoorSensorService.getInstance().deleteSensor(mSensor.getId(), new ResponseHandler() {
+                        @Override
+                        public void onSuccess(Object serverData) {
+                            Loader.getInstance().hideLoader();
+                            Logger.d(TAG, "Sensor cloud delete success: " + serverData);
+                            if (mSensor.getId() != null) {
+                                SecuredStorageManager.getInstance().deleteSensor(mSensor.getId());
+                            }
+                            String alertMsg = "HARDWARE RESET:\n" + DoorSensorServiceUrl.WIFI_DOOR_SENSOR_RESET + "\n"
+                                    + "Response: " + (data != null ? data.toString() : "empty") + "\n\n"
+                                    + "SERVER CLOUD DELETE:\n" + DoorSensorServiceUrl.DELETE_DOOR_SENSOR + mSensor.getId() + "\n"
+                                    + "Response: " + (serverData != null ? serverData.toString() : "empty");
+
+                            AppDialog.showAlertDialog(getActivity(), "[TEST ALERT] Sensor Reset & Server Delete Success", alertMsg, (d, w) -> {
+                                if (getActivity() != null) {
+                                    requireActivity().getOnBackPressedDispatcher().onBackPressed();
+                                }
+                            });
+                        }
+
+                        @Override
+                        public void onAuthError(String message) {
+                            if (mSensor.getId() != null) {
+                                SecuredStorageManager.getInstance().deleteSensor(mSensor.getId());
+                            }
+                            finishResetWithNotice(data, "Server Auth Error: " + message);
+                        }
+
+                        @Override
+                        public void onError(String message) {
+                            if (mSensor.getId() != null) {
+                                SecuredStorageManager.getInstance().deleteSensor(mSensor.getId());
+                            }
+                            finishResetWithNotice(data, "Server Delete: " + message);
+                        }
+                    });
+                } else {
+                    if (mSensor.getId() != null) {
+                        SecuredStorageManager.getInstance().deleteSensor(mSensor.getId());
+                    }
+                    Loader.getInstance().hideLoader();
+                    String alertMsg = "TARGET URL:\n" + DoorSensorServiceUrl.WIFI_DOOR_SENSOR_RESET + "\n\n"
+                            + "PAYLOAD SENT:\n" + payload.toString() + "\n\n"
+                            + "DEVICE RESPONSE:\n" + (data != null ? data.toString() : "empty") + "\n\n"
+                            + "(Local record cleared successfully)";
+
+                    AppDialog.showAlertDialog(getActivity(), "[TEST ALERT] Sensor Reset Success", alertMsg, (d, w) -> {
+                        if (getActivity() != null) {
+                            requireActivity().getOnBackPressedDispatcher().onBackPressed();
+                        }
+                    });
+                }
+            }
+
+            @Override
+            public void onAuthError(String message) {
+                Loader.getInstance().hideLoader();
+                forgetSensorHotspot();
+                String alertMsg = "TARGET URL:\n" + DoorSensorServiceUrl.WIFI_DOOR_SENSOR_RESET + "\n\n"
+                        + "PAYLOAD SENT:\n" + payload.toString() + "\n\n"
+                        + "AUTH ERROR:\n" + message;
+                AppDialog.showAlertDialog(getActivity(), "[TEST ALERT] Sensor Reset Auth Error", alertMsg);
+            }
+
+            @Override
+            public void onError(String message) {
+                Loader.getInstance().hideLoader();
+                forgetSensorHotspot();
+                String alertMsg = "TARGET URL:\n" + DoorSensorServiceUrl.WIFI_DOOR_SENSOR_RESET + "\n\n"
+                        + "PAYLOAD SENT:\n" + payload.toString() + "\n\n"
+                        + "ERROR:\n" + message;
+                AppDialog.showAlertDialog(getActivity(), "[TEST ALERT] Sensor Reset Error", alertMsg);
+            }
+        });
+    }
+
+    private void finishResetWithNotice(Object hardwareData, String serverNotice) {
+        Loader.getInstance().hideLoader();
+        forgetSensorHotspot();
+        String alertMsg = "HARDWARE RESET:\n" + DoorSensorServiceUrl.WIFI_DOOR_SENSOR_RESET + "\n"
+                + "Response: " + (hardwareData != null ? hardwareData.toString() : "success") + "\n\n"
+                + "SERVER SYNC:\n" + serverNotice + "\n\n"
+                + "(Local record cleared successfully)";
+        AppDialog.showAlertDialog(getActivity(), "[TEST ALERT] Sensor Reset Result", alertMsg, (d, w) -> {
+            if (getActivity() != null) {
+                requireActivity().getOnBackPressedDispatcher().onBackPressed();
+            }
+        });
     }
 }

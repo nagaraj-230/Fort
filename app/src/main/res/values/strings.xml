@@ -16,6 +16,9 @@
     <string name="sensor_code">Sensor Code</string>
     <string name="sensor_details">Sensor Details</string>
     <string name="sensor_battery">Sensor Battery</string>
+    <string name="engage_sensor_prompt">Press and hold sensor button for 3 seconds and Click \"OK\"</string>
+    <string name="engage_sensor_to_proceed">You may now operate the sensor</string>
+    <string name="activate_sensor">Activate Sensor</string>
     <string name="notification">Notification</string>
     <string name="users">Users</string>
     <string name="welcome">Welcome!</string>

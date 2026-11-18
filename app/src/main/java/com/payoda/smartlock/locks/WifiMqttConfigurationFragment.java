@@ -11,7 +11,9 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.Editable;
+import android.text.TextUtils;
 import android.text.TextWatcher;
+import org.json.JSONObject;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -35,6 +37,7 @@ import com.payoda.smartlock.BuildConfig;
 import com.payoda.smartlock.R;
 import com.payoda.smartlock.authentication.BaseFragment;
 import com.payoda.smartlock.constants.Constant;
+import com.payoda.smartlock.constants.DoorSensorServiceUrl;
 import com.payoda.smartlock.constants.ServiceUrl;
 import com.payoda.smartlock.fp.presenter.FPPresenter;
 import com.payoda.smartlock.fp.service.FPService;
@@ -299,6 +302,9 @@ public class WifiMqttConfigurationFragment extends BaseFragment implements View.
                             // Door Sensor: Use sensor serial/address directly without FORT_ or F_ prefix
                             String SSID = mLock.getSerialNumber();
                             String password = mLock.getScratchCode();
+                            if (password != null && password.length() > 8) {
+                                password = password.substring(0, 8);
+                            }
 
                             WifiUtilManager wifiUtilManager = new WifiUtilManager(getContext(), new WifiUtilManager.WifiListener() {
                                 @Override
@@ -308,7 +314,7 @@ public class WifiMqttConfigurationFragment extends BaseFragment implements View.
                                     new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
                                         @Override
                                         public void run() {
-                                            doMqttWifiConfiguration(getContext(), mLock);
+                                            doSensorWifiConfiguration(getContext(), mLock);
                                         }
                                     }, WIFI_DELAY_TIME);
                                 }
@@ -384,6 +390,193 @@ public class WifiMqttConfigurationFragment extends BaseFragment implements View.
 
                     }
                 });
+    }
+
+    private void doSensorWifiConfiguration(final Context context, final Lock sensor) {
+        if (context == null || sensor == null) return;
+        Loader.getInstance().showLoader(context);
+
+        // Step 1: Pair / Add device (POST http://192.168.4.1/add)
+        JSONObject addPayload = new JSONObject();
+        try {
+            addPayload.put("device-code", sensor.getSerialNumber());
+        } catch (Exception e) {
+            Logger.e(e);
+        }
+
+        Logger.d("##### [SENSOR_CONFIG] Posting to /add with device-code: " + sensor.getSerialNumber());
+        ServiceManager.getInstance().post(DoorSensorServiceUrl.WIFI_DOOR_SENSOR_ADD, addPayload, new ResponseHandler() {
+            @Override
+            public void onSuccess(Object data) {
+                Logger.d("##### [SENSOR_CONFIG] /add success response: " + data);
+                String ownerId = "";
+                int errorCode = 0;
+                String errorMsg = "";
+                try {
+                    if (data != null) {
+                        JSONObject res = new JSONObject(data.toString());
+                        errorCode = res.has("error-code") ? res.optInt("error-code", 0) : res.optInt("error", 0);
+                        errorMsg = res.has("error-message") ? res.optString("error-message", "") : res.optString("message", "");
+                        JSONObject respObj = res.optJSONObject("response");
+                        if (respObj != null) {
+                            ownerId = respObj.optString("owner-id", "");
+                        }
+                    }
+                } catch (Exception e) {
+                    Logger.e(e);
+                }
+
+                if (TextUtils.isEmpty(ownerId)) {
+                    if (errorCode == 1007 || (errorMsg != null && errorMsg.toLowerCase().contains("already added"))) {
+                        handleSensorAlreadyRegistered(context, sensor, "Device already added (Code 1007)");
+                    } else {
+                        Loader.getInstance().hideLoader();
+                        AppDialog.showAlertDialog(getActivity(), "Sensor Configuration Failed",
+                                "No valid owner-id received from sensor" + (errorCode > 0 ? " (Error " + errorCode + ")" : "") + ".");
+                    }
+                    return;
+                }
+
+                if (sensor.getId() != null) {
+                    SecuredStorageManager.getInstance().updateSensorOwnerId(sensor.getId(), ownerId);
+                }
+                if (sensor.getSerialNumber() != null) {
+                    SecuredStorageManager.getInstance().updateSensorOwnerId(sensor.getSerialNumber(), ownerId);
+                }
+
+                final String finalOwnerId = ownerId;
+                if (getActivity() != null) {
+                    String alertMsg = "STEP 1 TARGET:\n" + DoorSensorServiceUrl.WIFI_DOOR_SENSOR_ADD + "\n\n"
+                            + "PAYLOAD:\n" + addPayload.toString() + "\n\n"
+                            + "DEVICE RESPONSE:\n" + (data != null ? data.toString() : "empty") + "\n\n"
+                            + "SAVED OWNER-ID: " + finalOwnerId;
+                    AppDialog.showAlertDialog(getActivity(), "[TEST ALERT] Sensor P2P /add Response", alertMsg, (dialog, which) -> {
+                        sendSensorWifiConfigHttp(context, sensor, finalOwnerId);
+                    });
+                } else {
+                    sendSensorWifiConfigHttp(context, sensor, finalOwnerId);
+                }
+            }
+
+            @Override
+            public void onAuthError(String message) {
+                Logger.d("##### [SENSOR_CONFIG] /add onAuthError: " + message);
+                handleSensorAddFailure(context, sensor, message);
+            }
+
+            @Override
+            public void onError(String message) {
+                Logger.d("##### [SENSOR_CONFIG] /add onError: " + message);
+                handleSensorAddFailure(context, sensor, message);
+            }
+        });
+    }
+
+    private void handleSensorAddFailure(Context context, Lock sensor, String errorMessage) {
+        boolean isAlreadyAdded = errorMessage != null && (errorMessage.contains("1007") || errorMessage.toLowerCase().contains("already added"));
+        if (isAlreadyAdded) {
+            handleSensorAlreadyRegistered(context, sensor, errorMessage);
+        } else {
+            Loader.getInstance().hideLoader();
+            AppDialog.showAlertDialog(getActivity(), "Sensor Pairing Failed",
+                    "Failed to register sensor on hardware (Error: " + errorMessage + "). Pairing stopped without setting Wi-Fi.");
+        }
+    }
+
+    private void handleSensorAlreadyRegistered(Context context, Lock sensor, String message) {
+        String savedOwnerId = SecuredStorageManager.getInstance().getSensorOwnerId(sensor.getId());
+        if (TextUtils.isEmpty(savedOwnerId)) {
+            savedOwnerId = SecuredStorageManager.getInstance().getSensorOwnerId(sensor.getSerialNumber());
+        }
+
+        if (!TextUtils.isEmpty(savedOwnerId)) {
+            final String finalOwnerId = savedOwnerId;
+            if (getActivity() != null) {
+                String alertMsg = "Sensor already registered:\n" + message + "\n\n"
+                        + "Proceeding with previously saved owner-id: " + finalOwnerId;
+                AppDialog.showAlertDialog(getActivity(), "[TEST ALERT] Sensor Already Registered", alertMsg, (dialog, which) -> {
+                    sendSensorWifiConfigHttp(context, sensor, finalOwnerId);
+                });
+            } else {
+                sendSensorWifiConfigHttp(context, sensor, finalOwnerId);
+            }
+        } else {
+            Loader.getInstance().hideLoader();
+            AppDialog.showAlertDialog(getActivity(), "Sensor Already Registered",
+                    "Sensor was already registered on hardware (Error 1007), but no saved owner-id was found on this phone. Please reset the sensor by holding its button for 3 seconds, then try again.");
+        }
+    }
+
+    private void sendSensorWifiConfigHttp(final Context context, final Lock sensor, final String ownerId) {
+        try {
+            JSONObject wifiConfig = new JSONObject();
+            wifiConfig.put("owner-id", ownerId);
+            wifiConfig.put("wifi-ssid", et_wifiSSID.getText() != null ? et_wifiSSID.getText().toString().trim() : "");
+            wifiConfig.put("wifi-pass", et_wifiPassword.getText() != null ? et_wifiPassword.getText().toString() : "");
+
+            String secStr = "wpa2";
+            if (wifiSec == 0) {
+                secStr = "open";
+            } else if (wifiSec == 1) {
+                secStr = "wep";
+            } else if (wifiSec == 3) {
+                secStr = "wpa";
+            }
+            wifiConfig.put("wifi-sec", secStr);
+
+            String targetUrl = DoorSensorServiceUrl.DOOR_SENSOR_ACTIVITIES_DESTINATION;
+            wifiConfig.put("http-ip", targetUrl);
+            wifiConfig.put("http-url", targetUrl);
+            wifiConfig.put("http-port", "443");
+
+            Logger.d("##### [SENSOR_CONFIG] Posting to /config-wifi-http: " + wifiConfig.toString());
+
+            ServiceManager.getInstance().post(DoorSensorServiceUrl.WIFI_DOOR_SENSOR_CONFIG_HTTP, wifiConfig, new ResponseHandler() {
+                @Override
+                public void onSuccess(Object data) {
+                    Loader.getInstance().hideLoader();
+                    Logger.d("##### [SENSOR_CONFIG] /config-wifi-http success: " + data);
+                    forgetWIFINetwork(context, sensor);
+
+                    String alertMsg = "STEP 2 TARGET:\n" + DoorSensorServiceUrl.WIFI_DOOR_SENSOR_CONFIG_HTTP + "\n\n"
+                            + "PAYLOAD SENT TO SENSOR:\n" + wifiConfig.toString() + "\n\n"
+                            + "SENSOR RESPONSE:\n" + (data != null ? data.toString() : "empty");
+
+                    AppDialog.showAlertDialog(getContext(), "[TEST ALERT] Sensor Wi-Fi Config Success", alertMsg,
+                            new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    if (getActivity() != null) {
+                                        requireActivity().getOnBackPressedDispatcher().onBackPressed();
+                                    }
+                                }
+                            });
+                }
+
+                @Override
+                public void onAuthError(String message) {
+                    Loader.getInstance().hideLoader();
+                    String alertMsg = "STEP 2 TARGET:\n" + DoorSensorServiceUrl.WIFI_DOOR_SENSOR_CONFIG_HTTP + "\n\n"
+                            + "PAYLOAD SENT:\n" + wifiConfig.toString() + "\n\n"
+                            + "AUTH ERROR:\n" + message;
+                    AppDialog.showAlertDialog(getContext(), "[TEST ALERT] Sensor Wi-Fi Config Auth Error", alertMsg);
+                }
+
+                @Override
+                public void onError(String message) {
+                    Loader.getInstance().hideLoader();
+                    String alertMsg = "STEP 2 TARGET:\n" + DoorSensorServiceUrl.WIFI_DOOR_SENSOR_CONFIG_HTTP + "\n\n"
+                            + "PAYLOAD SENT:\n" + wifiConfig.toString() + "\n\n"
+                            + "ERROR:\n" + message;
+                    AppDialog.showAlertDialog(getContext(), "[TEST ALERT] Sensor Wi-Fi Config Error", alertMsg);
+                }
+            });
+
+        } catch (Exception e) {
+            Loader.getInstance().hideLoader();
+            Logger.e(e);
+            AppDialog.showAlertDialog(getContext(), "Error preparing config: " + e.getMessage());
+        }
     }
 
     private void doMqttWifiConfiguration(Context context, Lock lock) {

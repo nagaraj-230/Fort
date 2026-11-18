@@ -193,7 +193,15 @@ public class HistoryFragment extends Fragment implements SwipeRefreshLayout.OnRe
                             int count = (historyList != null && historyList.getHistory() != null) ? historyList.getHistory().size() : 0;
                             String responseJson = new com.google.gson.GsonBuilder().setPrettyPrinting().create().toJson(historyList);
                             if (getActivity() != null) {
-                                AppDialog.showAlertDialog(getActivity(), "History API Response (Lock " + mLock.getId() + ", Count: " + count + ")", responseJson);
+                                if (mLock != null && mLock.isSensor()) {
+                                    String targetUrl = String.format(com.payoda.smartlock.constants.DoorSensorServiceUrl.DOOR_SENSOR_HISTORY, mLock.getId(), LIMIT, offset);
+                                    String alertMsg = "TARGET URL:\n" + targetUrl + "\n\n"
+                                            + "ENTRIES COUNT: " + count + "\n\n"
+                                            + "RESPONSE:\n" + responseJson;
+                                    AppDialog.showAlertDialog(getActivity(), "[TEST ALERT] Door Sensor History API Response", alertMsg);
+                                } else {
+                                    AppDialog.showAlertDialog(getActivity(), "History API Response (Lock " + mLock.getId() + ", Count: " + count + ")", responseJson);
+                                }
                             }
                             prepopulateData(historyList, isPullDown);
                         } catch (Exception e) {
@@ -223,7 +231,13 @@ public class HistoryFragment extends Fragment implements SwipeRefreshLayout.OnRe
                         loading = false;
                         load_bottom_more_progress.setVisibility(View.GONE);
                         if (getActivity() != null) {
-                            AppDialog.showAlertDialog(getActivity(), "History API Error (Lock " + mLock.getId() + ")", message);
+                            if (mLock != null && mLock.isSensor()) {
+                                String targetUrl = String.format(com.payoda.smartlock.constants.DoorSensorServiceUrl.DOOR_SENSOR_HISTORY, mLock.getId(), LIMIT, offset);
+                                String alertMsg = "TARGET URL:\n" + targetUrl + "\n\n" + "ERROR:\n" + message;
+                                AppDialog.showAlertDialog(getActivity(), "[TEST ALERT] Door Sensor History Error", alertMsg);
+                            } else {
+                                AppDialog.showAlertDialog(getActivity(), "History API Error (Lock " + mLock.getId() + ")", message);
+                            }
                         }
                         prepopulateData(null, false);
                     }

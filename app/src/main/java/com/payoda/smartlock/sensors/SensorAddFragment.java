@@ -16,6 +16,7 @@ import com.payoda.smartlock.App;
 import com.payoda.smartlock.R;
 import com.payoda.smartlock.authentication.BaseFragment;
 import com.payoda.smartlock.constants.Constant;
+import com.payoda.smartlock.constants.DoorSensorServiceUrl;
 import com.payoda.smartlock.plugins.network.ResponseHandler;
 import com.payoda.smartlock.plugins.network.ServiceManager;
 import com.payoda.smartlock.plugins.storage.SecuredStorageManager;
@@ -104,7 +105,7 @@ public class SensorAddFragment extends BaseFragment {
                     sensor.setName(name);
                     sensor.setScratchCode(scratchCode);
                     sensor.setBattery("100");
-                    sensor.setStatus("1");
+                    sensor.setStatus(Constant.TRANSFER);
 
                     try {
                         if (data != null) {
@@ -128,20 +129,31 @@ public class SensorAddFragment extends BaseFragment {
                     Toast.makeText(getContext(), "Sensor added successfully!", Toast.LENGTH_SHORT).show();
 
                     if (getActivity() != null) {
-                        App.getInstance().showFullScreen(getActivity(), Constant.SCREEN.SENSOR_DETAILS, new Gson().toJson(sensor));
+                        String alertMsg = "TARGET URL:\n" + DoorSensorServiceUrl.ADD_DOOR_SENSOR + "\n\n"
+                                + "PAYLOAD SENT:\n" + payload.toString() + "\n\n"
+                                + "SERVER RESPONSE:\n" + (data != null ? data.toString() : "empty");
+
+                        AppDialog.showAlertDialog(getActivity(), "[TEST ALERT] Add Sensor API Check", alertMsg, (dialog, which) -> {
+                            if (getActivity() != null) {
+                                App.getInstance().showFullScreen(getActivity(), Constant.SCREEN.SENSOR_DETAILS, new Gson().toJson(sensor));
+                            }
+                        });
                     }
                 }
 
                 @Override
                 public void onAuthError(String message) {
                     Loader.getInstance().hideLoader();
-                    AppDialog.showAlertDialog(getContext(), message);
+                    AppDialog.showAlertDialog(getContext(), "Auth Error", message);
                 }
 
                 @Override
                 public void onError(String message) {
                     Loader.getInstance().hideLoader();
-                    AppDialog.showAlertDialog(getContext(), "Error Adding Sensor", message);
+                    String alertMsg = "TARGET URL:\n" + DoorSensorServiceUrl.ADD_DOOR_SENSOR + "\n\n"
+                            + "PAYLOAD SENT:\n" + payload.toString() + "\n\n"
+                            + "SERVER ERROR:\n" + message;
+                    AppDialog.showAlertDialog(getContext(), "[TEST ALERT] Add Sensor Error", alertMsg);
                 }
             });
         } catch (Exception e) {

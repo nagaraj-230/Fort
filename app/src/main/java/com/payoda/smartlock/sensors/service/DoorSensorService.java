@@ -29,7 +29,7 @@ public class DoorSensorService {
      * Fetch the list of door sensors from the backend.
      */
     public void getSensorList(int limit, int offset, final ResponseHandler responseHandler) {
-        String url = String.format(Locale.getDefault(), DoorSensorServiceUrl.SENSOR_LIST, limit, offset);
+        String url = String.format(Locale.getDefault(), DoorSensorServiceUrl.WIFI_DOOR_SENSOR_LIST, limit, offset);
         ServiceManager.getInstance().get(url, null, new ResponseHandler() {
             @Override
             public void onSuccess(Object data) {
@@ -71,15 +71,23 @@ public class DoorSensorService {
      * Expects payload: { "name": name, "serialNumber": serial, "scratch_code": scratchCode }
      */
     public void addSensor(JSONObject payload, final ResponseHandler responseHandler) {
-        ServiceManager.getInstance().post(DoorSensorServiceUrl.ADD_SENSOR, payload, responseHandler);
+        ServiceManager.getInstance().post(DoorSensorServiceUrl.ADD_DOOR_SENSOR, payload, responseHandler);
     }
 
     /**
      * Update door sensor name.
      */
     public void updateSensorName(String sensorId, JSONObject payload, final ResponseHandler responseHandler) {
-        String url = DoorSensorServiceUrl.UPDATE_SENSOR + sensorId;
+        String url = DoorSensorServiceUrl.UPDATE_DOOR_SENSOR + sensorId;
         ServiceManager.getInstance().post(url, payload, responseHandler);
+    }
+
+    /**
+     * Delete a door sensor on the backend server.
+     */
+    public void deleteSensor(String sensorId, final ResponseHandler responseHandler) {
+        String url = DoorSensorServiceUrl.DELETE_DOOR_SENSOR + sensorId;
+        ServiceManager.getInstance().delete(url, null, responseHandler);
     }
 }
 

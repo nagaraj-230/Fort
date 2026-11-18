@@ -139,16 +139,19 @@ public class ServiceManager {
     }
 
     private Map<String, String> getAuthHeaders() {
+        return getAuthHeaders(null);
+    }
+
+    private Map<String, String> getAuthHeaders(String url) {
 
         HashMap<String, String> headers = new HashMap<>();
         headers.put("Content-Type", "application/json; charset=utf-8");
 
-        // headers.put("bundle_id", "com.astrixengineering.touchplus.dev");
-        // headers.put("bundle_id", "com.payoda.secnor.dev");
-        // headers.put("bundle_id", BuildConfig.APPLICATION_ID);
-
         headers.put("bundle-id", BuildConfig.APPLICATION_ID);
-        if (!TextUtils.isEmpty(token))
+
+        // Do not attach cloud Authorization Bearer token to local hardware SoftAP requests (e.g. 192.168.4.1)
+        boolean isLocalHardware = url != null && url.contains("192.168.4.1");
+        if (!isLocalHardware && !TextUtils.isEmpty(token))
             headers.put("Authorization", getToken());
 
         Logger.d("### Headers --> ", headers.toString());
@@ -387,7 +390,7 @@ public class ServiceManager {
                 }) {
                     @Override
                     public Map<String, String> getHeaders() throws AuthFailureError {
-                        return getAuthHeaders();
+                        return getAuthHeaders(url);
                     }
                 };
                 request.setShouldCache(false);

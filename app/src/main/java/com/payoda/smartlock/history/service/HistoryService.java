@@ -140,7 +140,7 @@ public class HistoryService {
 
     public void sensorHistoryRequest(String id, int limit, int offset, ResponseHandler handler) {
         this.responseHandler = handler;
-        String url = String.format(Locale.ENGLISH, com.payoda.smartlock.constants.DoorSensorServiceUrl.SENSOR_HISTORY, id, String.valueOf(limit),
+        String url = String.format(Locale.ENGLISH, com.payoda.smartlock.constants.DoorSensorServiceUrl.DOOR_SENSOR_HISTORY, id, String.valueOf(limit),
                 String.valueOf(offset)) + "&t=" + System.currentTimeMillis();
         ServiceManager.getInstance().get(url, null, this.handler);
     }

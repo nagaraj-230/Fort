@@ -20,6 +20,9 @@ public class Sensor implements Serializable {
     @SerializedName(value = "scratch_code", alternate = {"scratchCode"})
     private String scratchCode;
 
+    @SerializedName(value = "owner_id", alternate = {"ownerId"})
+    private String ownerId;
+
     @SerializedName("battery")
     private String battery;
 
@@ -62,6 +65,14 @@ public class Sensor implements Serializable {
 
     public void setScratchCode(String scratchCode) {
         this.scratchCode = scratchCode;
+    }
+
+    public String getOwnerId() {
+        return ownerId;
+    }
+
+    public void setOwnerId(String ownerId) {
+        this.ownerId = ownerId;
     }
 
     public String getSerialNumber() {

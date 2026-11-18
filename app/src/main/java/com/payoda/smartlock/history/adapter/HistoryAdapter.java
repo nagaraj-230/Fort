@@ -94,6 +94,22 @@ public class HistoryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         }
 
 
+        if (history != null && history.getType() != null) {
+            if (history.getType().equalsIgnoreCase("DO")) {
+                data = "Door Opened";
+            } else if (history.getType().equalsIgnoreCase("DC")) {
+                data = "Door Closed";
+            } else if (history.getType().equalsIgnoreCase("AD")) {
+                data = "Sensor Paired";
+            } else if (history.getType().equalsIgnoreCase("CF")) {
+                data = "Sensor Wi-Fi Configured";
+            } else if (history.getType().equalsIgnoreCase("RS")) {
+                data = "Sensor Reset";
+            } else if (history.getType().equalsIgnoreCase("ST")) {
+                data = "Sensor Status Update";
+            }
+        }
+
         Logger.d("###### data history : " + data);
         lblHistory.setText(data);
 
@@ -171,6 +187,30 @@ public class HistoryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                 iTypeIcon = R.drawable.ic_remote_access;
                 String message = "Remote access request";
                 lblHistory.setText(message);
+            }
+            else if (history.getType().equalsIgnoreCase("DO")) { // Door Open
+                iTypeIcon = R.mipmap.ic_door;
+                lblHistory.setText("Door Opened");
+            }
+            else if (history.getType().equalsIgnoreCase("DC")) { // Door Closed
+                iTypeIcon = R.drawable.ic_grey_door;
+                lblHistory.setText("Door Closed");
+            }
+            else if (history.getType().equalsIgnoreCase("AD")) { // P2P Add
+                iTypeIcon = R.mipmap.ic_wifi;
+                lblHistory.setText("Sensor Paired");
+            }
+            else if (history.getType().equalsIgnoreCase("CF")) { // P2P Config
+                iTypeIcon = R.mipmap.ic_wifi;
+                lblHistory.setText("Sensor Wi-Fi Configured");
+            }
+            else if (history.getType().equalsIgnoreCase("RS")) { // P2P Reset
+                iTypeIcon = R.mipmap.ic_door;
+                lblHistory.setText("Sensor Reset");
+            }
+            else if (history.getType().equalsIgnoreCase("ST")) { // Sensor Status
+                iTypeIcon = R.mipmap.ic_wifi;
+                lblHistory.setText("Sensor Status Update");
             }
 
             imgHistoryStatus.setBackgroundResource(iTypeIcon);
