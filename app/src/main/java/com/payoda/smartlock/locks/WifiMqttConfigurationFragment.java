@@ -229,8 +229,9 @@ public class WifiMqttConfigurationFragment extends BaseFragment implements View.
 
         Spinner spinner = (Spinner) view.findViewById(R.id.editWifiSecurityGroupSpinner);
         // Create an ArrayAdapter using the string array and a default spinner layout
+        int arrayResId = (mLock != null && mLock.isSensor()) ? R.array.door_sensor_wifi_group_array : R.array.wifi_group_array_v6_0;
         ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(getActivity(),
-                R.array.wifi_group_array_v6_0, android.R.layout.simple_spinner_item);
+                arrayResId, android.R.layout.simple_spinner_item);
         // Specify the layout to use when the list of choices appears
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         // Apply the adapter to the spinner
@@ -396,7 +397,22 @@ public class WifiMqttConfigurationFragment extends BaseFragment implements View.
         if (context == null || sensor == null) return;
         Loader.getInstance().showLoader(context);
 
-        // Step 1: Pair / Add device (POST http://192.168.4.1/add)
+        String savedOwnerId = null;
+        if (sensor.getId() != null) {
+            savedOwnerId = SecuredStorageManager.getInstance().getSensorOwnerId(sensor.getId());
+        }
+        if (TextUtils.isEmpty(savedOwnerId) && sensor.getSerialNumber() != null) {
+            savedOwnerId = SecuredStorageManager.getInstance().getSensorOwnerId(sensor.getSerialNumber());
+        }
+
+        // Direct single-step: Sensor is already activated, use saved owner-id immediately without intermediate delay
+        if (!TextUtils.isEmpty(savedOwnerId)) {
+            Logger.d("##### [SENSOR_CONFIG] Using existing owner-id: " + savedOwnerId);
+            sendSensorWifiConfigHttp(context, sensor, savedOwnerId);
+            return;
+        }
+
+        // Fallback: Pair device if owner-id was not found
         JSONObject addPayload = new JSONObject();
         try {
             addPayload.put("device-code", sensor.getSerialNumber());
@@ -444,18 +460,8 @@ public class WifiMqttConfigurationFragment extends BaseFragment implements View.
                     SecuredStorageManager.getInstance().updateSensorOwnerId(sensor.getSerialNumber(), ownerId);
                 }
 
-                final String finalOwnerId = ownerId;
-                if (getActivity() != null) {
-                    String alertMsg = "STEP 1 TARGET:\n" + DoorSensorServiceUrl.WIFI_DOOR_SENSOR_ADD + "\n\n"
-                            + "PAYLOAD:\n" + addPayload.toString() + "\n\n"
-                            + "DEVICE RESPONSE:\n" + (data != null ? data.toString() : "empty") + "\n\n"
-                            + "SAVED OWNER-ID: " + finalOwnerId;
-                    AppDialog.showAlertDialog(getActivity(), "[TEST ALERT] Sensor P2P /add Response", alertMsg, (dialog, which) -> {
-                        sendSensorWifiConfigHttp(context, sensor, finalOwnerId);
-                    });
-                } else {
-                    sendSensorWifiConfigHttp(context, sensor, finalOwnerId);
-                }
+                // Proceed immediately without blocking alert dialog to prevent Wi-Fi timeout
+                sendSensorWifiConfigHttp(context, sensor, ownerId);
             }
 
             @Override
@@ -490,16 +496,8 @@ public class WifiMqttConfigurationFragment extends BaseFragment implements View.
         }
 
         if (!TextUtils.isEmpty(savedOwnerId)) {
-            final String finalOwnerId = savedOwnerId;
-            if (getActivity() != null) {
-                String alertMsg = "Sensor already registered:\n" + message + "\n\n"
-                        + "Proceeding with previously saved owner-id: " + finalOwnerId;
-                AppDialog.showAlertDialog(getActivity(), "[TEST ALERT] Sensor Already Registered", alertMsg, (dialog, which) -> {
-                    sendSensorWifiConfigHttp(context, sensor, finalOwnerId);
-                });
-            } else {
-                sendSensorWifiConfigHttp(context, sensor, finalOwnerId);
-            }
+            // Send config immediately without blocking dialog to preserve Wi-Fi connection
+            sendSensorWifiConfigHttp(context, sensor, savedOwnerId);
         } else {
             Loader.getInstance().hideLoader();
             AppDialog.showAlertDialog(getActivity(), "Sensor Already Registered",
@@ -519,8 +517,12 @@ public class WifiMqttConfigurationFragment extends BaseFragment implements View.
                 secStr = "open";
             } else if (wifiSec == 1) {
                 secStr = "wep";
-            } else if (wifiSec == 3) {
+            } else if (wifiSec == 2) {
                 secStr = "wpa";
+            } else if (wifiSec == 3) {
+                secStr = "wpa2";
+            } else if (wifiSec == 4) {
+                secStr = "wpa3";
             }
             wifiConfig.put("wifi-sec", secStr);
 
@@ -538,7 +540,7 @@ public class WifiMqttConfigurationFragment extends BaseFragment implements View.
                     Logger.d("##### [SENSOR_CONFIG] /config-wifi-http success: " + data);
                     forgetWIFINetwork(context, sensor);
 
-                    String alertMsg = "STEP 2 TARGET:\n" + DoorSensorServiceUrl.WIFI_DOOR_SENSOR_CONFIG_HTTP + "\n\n"
+                    String alertMsg = "TARGET URL:\n" + DoorSensorServiceUrl.WIFI_DOOR_SENSOR_CONFIG_HTTP + "\n\n"
                             + "PAYLOAD SENT TO SENSOR:\n" + wifiConfig.toString() + "\n\n"
                             + "SENSOR RESPONSE:\n" + (data != null ? data.toString() : "empty");
 
@@ -556,7 +558,7 @@ public class WifiMqttConfigurationFragment extends BaseFragment implements View.
                 @Override
                 public void onAuthError(String message) {
                     Loader.getInstance().hideLoader();
-                    String alertMsg = "STEP 2 TARGET:\n" + DoorSensorServiceUrl.WIFI_DOOR_SENSOR_CONFIG_HTTP + "\n\n"
+                    String alertMsg = "TARGET URL:\n" + DoorSensorServiceUrl.WIFI_DOOR_SENSOR_CONFIG_HTTP + "\n\n"
                             + "PAYLOAD SENT:\n" + wifiConfig.toString() + "\n\n"
                             + "AUTH ERROR:\n" + message;
                     AppDialog.showAlertDialog(getContext(), "[TEST ALERT] Sensor Wi-Fi Config Auth Error", alertMsg);
@@ -565,7 +567,7 @@ public class WifiMqttConfigurationFragment extends BaseFragment implements View.
                 @Override
                 public void onError(String message) {
                     Loader.getInstance().hideLoader();
-                    String alertMsg = "STEP 2 TARGET:\n" + DoorSensorServiceUrl.WIFI_DOOR_SENSOR_CONFIG_HTTP + "\n\n"
+                    String alertMsg = "TARGET URL:\n" + DoorSensorServiceUrl.WIFI_DOOR_SENSOR_CONFIG_HTTP + "\n\n"
                             + "PAYLOAD SENT:\n" + wifiConfig.toString() + "\n\n"
                             + "ERROR:\n" + message;
                     AppDialog.showAlertDialog(getContext(), "[TEST ALERT] Sensor Wi-Fi Config Error", alertMsg);

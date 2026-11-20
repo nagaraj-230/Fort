@@ -223,6 +223,15 @@
         <item>WPA_WPA2_PSK</item>
     </string-array>
 
+    <!--Door Sensor Wi-Fi Security Types (ESP32-C3)-->
+    <string-array name="door_sensor_wifi_group_array">
+        <item>OPEN</item>
+        <item>WEP</item>
+        <item>WPA</item>
+        <item>WPA2</item>
+        <item>WPA3</item>
+    </string-array>
+
 
     <string-array name="lock_versions">
         <item>V1.0</item>
