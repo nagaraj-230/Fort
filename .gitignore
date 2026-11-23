@@ -43,6 +43,26 @@ captures/
 # External native build folder generated in Android Studio 2.2 and later
 .externalNativeBuild
 
-# APK / AAB outputs
+# APK / AAB outputs and build metadata
 *.apk
 *.aab
+output-metadata.json
+app/*Staging/
+app/*Prod/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+
+# Documents and Office files
+*.md
+*.pdf
+*.docx
+*.doc
+*.xlsx
+*.xls
+*.csv
+
+# Android Dex Metadata / .dm files
+*.dm
