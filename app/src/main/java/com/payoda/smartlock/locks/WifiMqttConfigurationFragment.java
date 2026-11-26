@@ -529,7 +529,20 @@ public class WifiMqttConfigurationFragment extends BaseFragment implements View.
             String targetUrl = DoorSensorServiceUrl.DOOR_SENSOR_ACTIVITIES_DESTINATION;
             wifiConfig.put("http-ip", targetUrl);
             wifiConfig.put("http-url", targetUrl);
-            wifiConfig.put("http-port", "443");
+
+            // Match Lock port configuration: Port 80 for Staging, 80/443 (from BrandInfo) for Production
+            boolean isStaging = "S".equalsIgnoreCase(BuildConfig.BUILD_VARIANT) || BuildConfig.BASE_URL.contains("staging");
+            String sensorPort = "80";
+            if (!isStaging) {
+                BrandInfoResponse.BrandInfo brandInfo = SecuredStorageManager.getInstance().getBrandInfo();
+                if (brandInfo != null && brandInfo.getMqttServiceUrl() != null && !brandInfo.getMqttServiceUrl().isEmpty()) {
+                    int colonIndex = brandInfo.getMqttServiceUrl().lastIndexOf(":");
+                    if (colonIndex != -1) {
+                        sensorPort = brandInfo.getMqttServiceUrl().substring(colonIndex + 1);
+                    }
+                }
+            }
+            wifiConfig.put("http-port", sensorPort);
 
             Logger.d("##### [SENSOR_CONFIG] Posting to /config-wifi-http: " + wifiConfig.toString());
 
