@@ -1,9 +1,12 @@
 package com.payoda.smartlock.sensors.service;
 
+import android.text.TextUtils;
 import com.google.gson.Gson;
+import com.payoda.smartlock.constants.Constant;
 import com.payoda.smartlock.constants.DoorSensorServiceUrl;
 import com.payoda.smartlock.plugins.network.ResponseHandler;
 import com.payoda.smartlock.plugins.network.ServiceManager;
+import com.payoda.smartlock.sensors.model.Sensor;
 import com.payoda.smartlock.sensors.model.Sensors;
 import com.payoda.smartlock.utils.Logger;
 
@@ -83,11 +86,94 @@ public class DoorSensorService {
     }
 
     /**
-     * Delete a door sensor on the backend server.
+     * Factory reset a door sensor on the backend server.
+     * Sends the complete sensor model with status = "2" (Constant.FACTORY_RESET),
+     * matching Lock's updatelock behavior so the backend successfully deletes the DB row.
+     */
+    public void resetSensorOnServer(Sensor sensor, final ResponseHandler responseHandler) {
+        if (sensor == null || TextUtils.isEmpty(sensor.getId())) {
+            if (responseHandler != null) {
+                responseHandler.onError("Sensor ID is missing");
+            }
+            return;
+        }
+
+        try {
+            JSONObject payload = new JSONObject();
+            payload.put("id", sensor.getId());
+            payload.put("name", sensor.getName() != null ? sensor.getName() : "");
+
+            String serial = sensor.getSerialNumber() != null ? sensor.getSerialNumber() : sensor.getCode();
+            if (serial != null) {
+                payload.put("serial_number", serial);
+                payload.put("serialNumber", serial);
+            }
+            if (!TextUtils.isEmpty(sensor.getScratchCode())) {
+                payload.put("scratch_code", sensor.getScratchCode());
+                payload.put("scratchCode", sensor.getScratchCode());
+            }
+            if (!TextUtils.isEmpty(sensor.getOwnerId())) {
+                payload.put("owner_id", sensor.getOwnerId());
+            }
+            if (!TextUtils.isEmpty(sensor.getBattery())) {
+                payload.put("battery", sensor.getBattery());
+            }
+
+            // Exactly matching Lock: status = "2" (Constant.FACTORY_RESET)
+            payload.put("status", Constant.FACTORY_RESET);
+
+            String url = DoorSensorServiceUrl.UPDATE_DOOR_SENSOR + sensor.getId();
+            Logger.d("##### [SENSOR_RESET] Resetting sensor on server via: " + url + " | payload: " + payload.toString());
+
+            ServiceManager.getInstance().post(url, payload, new ResponseHandler() {
+                @Override
+                public void onSuccess(Object data) {
+                    Logger.d("##### [SENSOR_RESET] Server reset success: " + data);
+                    if (responseHandler != null) {
+                        responseHandler.onSuccess(data);
+                    }
+                }
+
+                @Override
+                public void onAuthError(String message) {
+                    Logger.d("##### [SENSOR_RESET] Server reset auth error: " + message);
+                    if (responseHandler != null) {
+                        responseHandler.onAuthError(message);
+                    }
+                }
+
+                @Override
+                public void onError(String message) {
+                    Logger.d("##### [SENSOR_RESET] Server reset error: " + message);
+                    if (responseHandler != null) {
+                        responseHandler.onError(message);
+                    }
+                }
+            });
+
+        } catch (Exception e) {
+            Logger.e(e);
+            if (responseHandler != null) {
+                responseHandler.onError(e.getMessage());
+            }
+        }
+    }
+
+    public void resetSensorOnServer(String sensorId, final ResponseHandler responseHandler) {
+        Sensor s = new Sensor();
+        s.setId(sensorId);
+        resetSensorOnServer(s, responseHandler);
+    }
+
+    /**
+     * Delete / Reset a door sensor on the backend server.
      */
     public void deleteSensor(String sensorId, final ResponseHandler responseHandler) {
-        String url = DoorSensorServiceUrl.DELETE_DOOR_SENSOR + sensorId;
-        ServiceManager.getInstance().delete(url, null, responseHandler);
+        resetSensorOnServer(sensorId, responseHandler);
+    }
+
+    public void deleteSensor(Sensor sensor, final ResponseHandler responseHandler) {
+        resetSensorOnServer(sensor, responseHandler);
     }
 }
 

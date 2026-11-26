@@ -539,7 +539,12 @@ public class SensorDetailFragment extends BaseFragment {
                         @Override
                         public void connectionTimeOut() {
                             Loader.getInstance().hideLoader();
-                            AppDialog.showAlertDialog(getActivity(), "Sensor connection timeout. Please ensure the sensor is in configuration mode.");
+                            AppDialog.showAlertDialog(getActivity(), "Sensor Connection Timeout",
+                                    "Could not connect to sensor Wi-Fi.\n\nDo you want to reset and remove this sensor from your server account anyway?",
+                                    "Reset on Server", (d, w) -> {
+                                        doServerReset(null);
+                                    },
+                                    "Cancel", (d, w) -> {});
                         }
                     });
                     wifiUtilManager.startScanning("", SSID, password);
@@ -563,59 +568,9 @@ public class SensorDetailFragment extends BaseFragment {
                 Logger.d(TAG, "Sensor reset success: " + data);
                 forgetSensorHotspot();
 
-                if (mSensor.getId() != null && getContext() != null && ServiceManager.getInstance().isNetworkAvailable(getContext())) {
-                    DoorSensorService.getInstance().deleteSensor(mSensor.getId(), new ResponseHandler() {
-                        @Override
-                        public void onSuccess(Object serverData) {
-                            Loader.getInstance().hideLoader();
-                            Logger.d(TAG, "Sensor cloud delete success: " + serverData);
-                            if (mSensor.getId() != null) {
-                                SecuredStorageManager.getInstance().deleteSensor(mSensor.getId());
-                            }
-                            String alertMsg = "HARDWARE RESET:\n" + DoorSensorServiceUrl.WIFI_DOOR_SENSOR_RESET + "\n"
-                                    + "Response: " + (data != null ? data.toString() : "empty") + "\n\n"
-                                    + "SERVER CLOUD DELETE:\n" + DoorSensorServiceUrl.DELETE_DOOR_SENSOR + mSensor.getId() + "\n"
-                                    + "Response: " + (serverData != null ? serverData.toString() : "empty");
-
-                            AppDialog.showAlertDialog(getActivity(), "[TEST ALERT] Sensor Reset & Server Delete Success", alertMsg, (d, w) -> {
-                                if (getActivity() != null) {
-                                    requireActivity().getOnBackPressedDispatcher().onBackPressed();
-                                }
-                            });
-                        }
-
-                        @Override
-                        public void onAuthError(String message) {
-                            if (mSensor.getId() != null) {
-                                SecuredStorageManager.getInstance().deleteSensor(mSensor.getId());
-                            }
-                            finishResetWithNotice(data, "Server Auth Error: " + message);
-                        }
-
-                        @Override
-                        public void onError(String message) {
-                            if (mSensor.getId() != null) {
-                                SecuredStorageManager.getInstance().deleteSensor(mSensor.getId());
-                            }
-                            finishResetWithNotice(data, "Server Delete: " + message);
-                        }
-                    });
-                } else {
-                    if (mSensor.getId() != null) {
-                        SecuredStorageManager.getInstance().deleteSensor(mSensor.getId());
-                    }
-                    Loader.getInstance().hideLoader();
-                    String alertMsg = "TARGET URL:\n" + DoorSensorServiceUrl.WIFI_DOOR_SENSOR_RESET + "\n\n"
-                            + "PAYLOAD SENT:\n" + payload.toString() + "\n\n"
-                            + "DEVICE RESPONSE:\n" + (data != null ? data.toString() : "empty") + "\n\n"
-                            + "(Local record cleared successfully)";
-
-                    AppDialog.showAlertDialog(getActivity(), "[TEST ALERT] Sensor Reset Success", alertMsg, (d, w) -> {
-                        if (getActivity() != null) {
-                            requireActivity().getOnBackPressedDispatcher().onBackPressed();
-                        }
-                    });
-                }
+                // Wait 1.5s for Android to drop sensor SoftAP and restore Internet connection (Mobile Data / Home Wi-Fi)
+                Loader.getInstance().showLoader(getContext());
+                new Handler(Looper.getMainLooper()).postDelayed(() -> doServerReset(data), 1500);
             }
 
             @Override
@@ -640,13 +595,134 @@ public class SensorDetailFragment extends BaseFragment {
         });
     }
 
+    private void doServerReset(Object hardwareData) {
+        if (getContext() == null || mSensor == null) return;
+        Loader.getInstance().showLoader(getContext());
+
+        // Ensure all available details are populated on mSensor before calling reset
+        if (TextUtils.isEmpty(mSensor.getScratchCode())) {
+            ArrayList<Sensor> list = SecuredStorageManager.getInstance().getSensorList();
+            if (list != null) {
+                for (Sensor s : list) {
+                    if ((s.getId() != null && s.getId().equalsIgnoreCase(mSensor.getId())) ||
+                            (s.getSerialNumber() != null && s.getSerialNumber().equalsIgnoreCase(mSensor.getSerialNumber()))) {
+                        if (!TextUtils.isEmpty(s.getScratchCode())) {
+                            mSensor.setScratchCode(s.getScratchCode());
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+        if (TextUtils.isEmpty(mSensor.getSerialNumber()) && !TextUtils.isEmpty(mSensor.getCode())) {
+            mSensor.setSerialNumber(mSensor.getCode());
+        }
+
+        final Sensor sensorToReset = mSensor;
+        final String sensorTargetUrl = DoorSensorServiceUrl.UPDATE_DOOR_SENSOR + (sensorToReset.getId() != null ? sensorToReset.getId() : "");
+        final JSONObject sensorPayload = new JSONObject();
+        try {
+            sensorPayload.put("id", sensorToReset.getId());
+            sensorPayload.put("name", sensorToReset.getName() != null ? sensorToReset.getName() : "");
+            String serial = sensorToReset.getSerialNumber() != null ? sensorToReset.getSerialNumber() : sensorToReset.getCode();
+            if (serial != null) {
+                sensorPayload.put("serial_number", serial);
+                sensorPayload.put("serialNumber", serial);
+            }
+            if (!TextUtils.isEmpty(sensorToReset.getScratchCode())) {
+                sensorPayload.put("scratch_code", sensorToReset.getScratchCode());
+                sensorPayload.put("scratchCode", sensorToReset.getScratchCode());
+            }
+            if (!TextUtils.isEmpty(sensorToReset.getOwnerId())) {
+                sensorPayload.put("owner_id", sensorToReset.getOwnerId());
+            }
+            if (!TextUtils.isEmpty(sensorToReset.getBattery())) {
+                sensorPayload.put("battery", sensorToReset.getBattery());
+            }
+            sensorPayload.put("status", Constant.FACTORY_RESET);
+        } catch (Exception ignored) {}
+
+        DoorSensorService.getInstance().resetSensorOnServer(sensorToReset, new ResponseHandler() {
+            @Override
+            public void onSuccess(Object serverData) {
+                Loader.getInstance().hideLoader();
+                Logger.d(TAG, "Sensor server reset success: " + serverData);
+
+                // Delete locally now that server has processed the reset
+                deleteSensorLocally(sensorToReset);
+
+                if (getActivity() != null) {
+                    String alertMsg = "TARGET URL:\n" + sensorTargetUrl + "\n\n"
+                            + "PAYLOAD SENT:\n" + sensorPayload.toString() + "\n\n"
+                            + "SERVER RESPONSE:\n" + (serverData != null ? serverData.toString() : "empty");
+                    AppDialog.showAlertDialog(getActivity(), "[TEST ALERT] Sensor Factory Reset Server Response", alertMsg, (d, w) -> {
+                        if (getActivity() != null) {
+                            requireActivity().getOnBackPressedDispatcher().onBackPressed();
+                        }
+                    });
+                } else if (getActivity() != null) {
+                    requireActivity().getOnBackPressedDispatcher().onBackPressed();
+                }
+            }
+
+            @Override
+            public void onAuthError(String message) {
+                Loader.getInstance().hideLoader();
+                deleteSensorLocally(sensorToReset);
+
+                if (getActivity() != null) {
+                    String alertMsg = "TARGET URL:\n" + sensorTargetUrl + "\n\n"
+                            + "PAYLOAD SENT:\n" + sensorPayload.toString() + "\n\n"
+                            + "AUTH ERROR:\n" + message;
+                    AppDialog.showAlertDialog(getActivity(), "[TEST ALERT] Sensor Factory Reset Auth Error", alertMsg, (d, w) -> {
+                        if (getActivity() != null) {
+                            requireActivity().getOnBackPressedDispatcher().onBackPressed();
+                        }
+                    });
+                } else if (getActivity() != null) {
+                    requireActivity().getOnBackPressedDispatcher().onBackPressed();
+                }
+            }
+
+            @Override
+            public void onError(String message) {
+                Loader.getInstance().hideLoader();
+                deleteSensorLocally(sensorToReset);
+
+                if (getActivity() != null) {
+                    String alertMsg = "TARGET URL:\n" + sensorTargetUrl + "\n\n"
+                            + "PAYLOAD SENT:\n" + sensorPayload.toString() + "\n\n"
+                            + "ERROR:\n" + message;
+                    AppDialog.showAlertDialog(getActivity(), "[TEST ALERT] Sensor Factory Reset Error", alertMsg, (d, w) -> {
+                        if (getActivity() != null) {
+                            requireActivity().getOnBackPressedDispatcher().onBackPressed();
+                        }
+                    });
+                } else if (getActivity() != null) {
+                    requireActivity().getOnBackPressedDispatcher().onBackPressed();
+                }
+            }
+        });
+    }
+
+    private void deleteSensorLocally(Sensor sensor) {
+        if (sensor == null) return;
+        if (sensor.getId() != null) {
+            SecuredStorageManager.getInstance().deleteSensor(sensor.getId());
+        }
+        if (sensor.getSerialNumber() != null) {
+            SecuredStorageManager.getInstance().deleteSensor(sensor.getSerialNumber());
+        }
+        if (sensor.getCode() != null) {
+            SecuredStorageManager.getInstance().deleteSensor(sensor.getCode());
+        }
+    }
+
     private void finishResetWithNotice(Object hardwareData, String serverNotice) {
         Loader.getInstance().hideLoader();
-        forgetSensorHotspot();
-        String alertMsg = "HARDWARE RESET:\n" + DoorSensorServiceUrl.WIFI_DOOR_SENSOR_RESET + "\n"
-                + "Response: " + (hardwareData != null ? hardwareData.toString() : "success") + "\n\n"
+        String alertMsg = (hardwareData != null ? "HARDWARE RESET:\nSuccess\n\n" : "")
                 + "SERVER SYNC:\n" + serverNotice + "\n\n"
-                + "(Local record cleared successfully)";
+                + "Sensor removed locally from app.";
         AppDialog.showAlertDialog(getActivity(), "[TEST ALERT] Sensor Reset Result", alertMsg, (d, w) -> {
             if (getActivity() != null) {
                 requireActivity().getOnBackPressedDispatcher().onBackPressed();

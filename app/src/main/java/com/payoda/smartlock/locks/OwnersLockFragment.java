@@ -455,6 +455,9 @@ public class OwnersLockFragment extends BaseFragment implements ILockSelectCallb
 
         forgetWIFINetwork();
 
+        final String lockPayload = new Gson().toJson(mLock);
+        final String lockTargetUrl = ServiceUrl.UPDATE_LOCK + mLock.getId();
+
         if ((ServiceManager.getInstance().isNetworkAvailable(getActivity())
                 || ServiceManager.getInstance().isMobileDataEnabled(getContext()))&& mLock.getId() != null) {
             Loader.getInstance().showLoader(getContext());
@@ -464,7 +467,17 @@ public class OwnersLockFragment extends BaseFragment implements ILockSelectCallb
                     Loader.getInstance().hideLoader();
                     mLock.setSync(true);
                     LockDBClient.getInstance().save(mLock,getContext());
-                    if (isGoBack && getActivity() != null) {
+
+                    if (getActivity() != null) {
+                        String alertMsg = "TARGET URL:\n" + lockTargetUrl + "\n\n"
+                                + "PAYLOAD SENT:\n" + lockPayload + "\n\n"
+                                + "SERVER RESPONSE:\n" + (data != null ? data.toString() : "empty");
+                        AppDialog.showAlertDialog(getActivity(), "[TEST ALERT] Lock Factory Reset Server Response", alertMsg, (dialog, which) -> {
+                            if (isGoBack && getActivity() != null) {
+                                requireActivity().getOnBackPressedDispatcher().onBackPressed();
+                            }
+                        });
+                    } else if (isGoBack && getActivity() != null) {
                         requireActivity().getOnBackPressedDispatcher().onBackPressed();
                     }
                 }
@@ -474,7 +487,17 @@ public class OwnersLockFragment extends BaseFragment implements ILockSelectCallb
                     Loader.getInstance().hideLoader();
                     doOfflineUpdateLock();
                     SyncScheduler.getInstance().schedule(getActivity(), Constant.JOBS.ALL);
-                    if (isGoBack && getActivity() != null) {
+
+                    if (getActivity() != null) {
+                        String alertMsg = "TARGET URL:\n" + lockTargetUrl + "\n\n"
+                                + "PAYLOAD SENT:\n" + lockPayload + "\n\n"
+                                + "AUTH ERROR:\n" + message;
+                        AppDialog.showAlertDialog(getActivity(), "[TEST ALERT] Lock Factory Reset Auth Error", alertMsg, (dialog, which) -> {
+                            if (isGoBack && getActivity() != null) {
+                                requireActivity().getOnBackPressedDispatcher().onBackPressed();
+                            }
+                        });
+                    } else if (isGoBack && getActivity() != null) {
                         requireActivity().getOnBackPressedDispatcher().onBackPressed();
                     }
                 }
@@ -484,7 +507,17 @@ public class OwnersLockFragment extends BaseFragment implements ILockSelectCallb
                     Loader.getInstance().hideLoader();
                     doOfflineUpdateLock();
                     SyncScheduler.getInstance().schedule(getActivity(), Constant.JOBS.ALL);
-                    if (isGoBack && getActivity() != null) {
+
+                    if (getActivity() != null) {
+                        String alertMsg = "TARGET URL:\n" + lockTargetUrl + "\n\n"
+                                + "PAYLOAD SENT:\n" + lockPayload + "\n\n"
+                                + "ERROR:\n" + message;
+                        AppDialog.showAlertDialog(getActivity(), "[TEST ALERT] Lock Factory Reset Error", alertMsg, (dialog, which) -> {
+                            if (isGoBack && getActivity() != null) {
+                                requireActivity().getOnBackPressedDispatcher().onBackPressed();
+                            }
+                        });
+                    } else if (isGoBack && getActivity() != null) {
                         requireActivity().getOnBackPressedDispatcher().onBackPressed();
                     }
                 }

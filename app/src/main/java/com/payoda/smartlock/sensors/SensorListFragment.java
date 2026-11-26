@@ -113,7 +113,16 @@ public class SensorListFragment extends Fragment implements SwipeRefreshLayout.O
                         }
 
                         if (newSensors != null) {
+                            ArrayList<Sensor> validSensors = new ArrayList<>();
                             for (Sensor s : newSensors) {
+                                // Skip reset or deleted sensors
+                                if (s.getStatus() != null && s.getStatus().equalsIgnoreCase(Constant.FACTORY_RESET)) {
+                                    continue;
+                                }
+                                if (SecuredStorageManager.getInstance().isSensorDeleted(s.getId(), s.getSerialNumber(), s.getCode())) {
+                                    continue;
+                                }
+
                                 Sensor cached = null;
                                 if (!TextUtils.isEmpty(s.getId())) cached = cachedMap.get(s.getId());
                                 if (cached == null && !TextUtils.isEmpty(s.getSerialNumber())) cached = cachedMap.get(s.getSerialNumber());
@@ -150,8 +159,9 @@ public class SensorListFragment extends Fragment implements SwipeRefreshLayout.O
                                         s.setScratchCode(cached.getScratchCode());
                                     }
                                 }
+                                validSensors.add(s);
                             }
-                            sensorList = newSensors;
+                            sensorList = validSensors;
                             SecuredStorageManager.getInstance().saveSensorList(sensorList);
                         }
                     }
@@ -187,7 +197,19 @@ public class SensorListFragment extends Fragment implements SwipeRefreshLayout.O
     }
 
     private void fallbackToLocalStorage() {
-        sensorList = SecuredStorageManager.getInstance().getSensorList();
+        ArrayList<Sensor> stored = SecuredStorageManager.getInstance().getSensorList();
+        sensorList = new ArrayList<>();
+        if (stored != null) {
+            for (Sensor s : stored) {
+                if (s.getStatus() != null && s.getStatus().equalsIgnoreCase(Constant.FACTORY_RESET)) {
+                    continue;
+                }
+                if (SecuredStorageManager.getInstance().isSensorDeleted(s.getId(), s.getSerialNumber(), s.getCode())) {
+                    continue;
+                }
+                sensorList.add(s);
+            }
+        }
         renderSensorList();
     }
 

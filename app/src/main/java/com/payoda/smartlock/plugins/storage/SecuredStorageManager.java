@@ -908,6 +908,7 @@ public class SecuredStorageManager {
 
     public void addSensor(Sensor sensor) {
         if (sensor == null) return;
+        unmarkSensorDeleted(sensor.getId(), sensor.getSerialNumber(), sensor.getCode());
         ArrayList<Sensor> list = getSensorList();
         boolean found = false;
         for (int i = 0; i < list.size(); i++) {
@@ -928,17 +929,91 @@ public class SecuredStorageManager {
         ArrayList<Sensor> list = getSensorList();
         String serialNumber = null;
         String code = null;
-        for (int i = 0; i < list.size(); i++) {
+        for (int i = list.size() - 1; i >= 0; i--) {
             Sensor s = list.get(i);
-            if (s.getId() != null && s.getId().equalsIgnoreCase(sensorId)) {
-                serialNumber = s.getSerialNumber();
-                code = s.getCode();
+            if ((s.getId() != null && s.getId().equalsIgnoreCase(sensorId))
+                    || (s.getSerialNumber() != null && s.getSerialNumber().equalsIgnoreCase(sensorId))
+                    || (s.getCode() != null && s.getCode().equalsIgnoreCase(sensorId))) {
+                if (serialNumber == null) serialNumber = s.getSerialNumber();
+                if (code == null) code = s.getCode();
                 list.remove(i);
-                break;
             }
         }
         saveSensorList(list);
         removeSensorOwnerId(sensorId, serialNumber, code);
+        markSensorDeleted(sensorId, serialNumber, code);
+    }
+
+    private static final String DELETED_SENSOR_SET = "deleted_sensor_set";
+
+    public void markSensorDeleted(String... keys) {
+        if (keys == null || keys.length == 0) return;
+        try {
+            String json = getString(DELETED_SENSOR_SET, "[]");
+            org.json.JSONArray arr = new org.json.JSONArray(json);
+            java.util.HashSet<String> set = new java.util.HashSet<>();
+            for (int i = 0; i < arr.length(); i++) {
+                set.add(arr.getString(i));
+            }
+            for (String k : keys) {
+                if (!TextUtils.isEmpty(k)) {
+                    set.add(k.toLowerCase());
+                }
+            }
+            org.json.JSONArray newArr = new org.json.JSONArray();
+            for (String s : set) {
+                newArr.put(s);
+            }
+            putString(DELETED_SENSOR_SET, newArr.toString());
+        } catch (Exception e) {
+            Logger.e(e);
+        }
+    }
+
+    public void unmarkSensorDeleted(String... keys) {
+        if (keys == null || keys.length == 0) return;
+        try {
+            String json = getString(DELETED_SENSOR_SET, "[]");
+            if (TextUtils.isEmpty(json) || json.equals("[]")) return;
+            org.json.JSONArray arr = new org.json.JSONArray(json);
+            java.util.HashSet<String> set = new java.util.HashSet<>();
+            for (int i = 0; i < arr.length(); i++) {
+                set.add(arr.getString(i));
+            }
+            for (String k : keys) {
+                if (!TextUtils.isEmpty(k)) {
+                    set.remove(k.toLowerCase());
+                }
+            }
+            org.json.JSONArray newArr = new org.json.JSONArray();
+            for (String s : set) {
+                newArr.put(s);
+            }
+            putString(DELETED_SENSOR_SET, newArr.toString());
+        } catch (Exception e) {
+            Logger.e(e);
+        }
+    }
+
+    public boolean isSensorDeleted(String... keys) {
+        if (keys == null || keys.length == 0) return false;
+        try {
+            String json = getString(DELETED_SENSOR_SET, "[]");
+            if (TextUtils.isEmpty(json) || json.equals("[]")) return false;
+            org.json.JSONArray arr = new org.json.JSONArray(json);
+            java.util.HashSet<String> set = new java.util.HashSet<>();
+            for (int i = 0; i < arr.length(); i++) {
+                set.add(arr.getString(i).toLowerCase());
+            }
+            for (String k : keys) {
+                if (!TextUtils.isEmpty(k) && set.contains(k.toLowerCase())) {
+                    return true;
+                }
+            }
+        } catch (Exception e) {
+            Logger.e(e);
+        }
+        return false;
     }
 
     public void removeSensorOwnerId(String... keys) {

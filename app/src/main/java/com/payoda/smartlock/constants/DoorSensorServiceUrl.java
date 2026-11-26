@@ -15,7 +15,7 @@ public class DoorSensorServiceUrl {
     public static final String WIFI_DOOR_SENSOR_LIST = DOOR_SENSOR_SERVICE_URL + "/locks/locklist?limit=%s&offset=%s";
     public static final String ADD_DOOR_SENSOR = DOOR_SENSOR_SERVICE_URL + "/locks/newlock";
     public static final String UPDATE_DOOR_SENSOR = DOOR_SENSOR_SERVICE_URL + "/locks/updatelock?id=";
-    public static final String DELETE_DOOR_SENSOR = DOOR_SENSOR_SERVICE_URL + "/locks/deletelock?id=";
+    public static final String DELETE_DOOR_SENSOR = UPDATE_DOOR_SENSOR;
     public static final String DOOR_SENSOR_HISTORY = DOOR_SENSOR_SERVICE_URL + "/activities/activitylist?id=%s&limit=%s&offset=%s";
 
     // Destination URL sent to the sensor hardware to report events (http-ip)
