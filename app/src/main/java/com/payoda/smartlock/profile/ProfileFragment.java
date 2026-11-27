@@ -156,7 +156,7 @@ public class ProfileFragment extends Fragment implements ResponseHandler {
             if(BuildConfig.APP_VERSION_VISIBILITY){
                 TextView lblVersion = view.findViewById(R.id.lblVersion);
                 lblVersion.setVisibility(View.VISIBLE);
-                lblVersion.setText( "App Version: " + BuildConfig.VERSION_NAME + "#" + BuildConfig.VERSION_CODE + "(" + BuildConfig.BUILD_VARIANT  + ")");
+                lblVersion.setText( "App Version: " + BuildConfig.VERSION_NAME + "#" + BuildConfig.VERSION_CODE + "(" + BuildConfig.BUILD_VERSION_TAG  + ")");
             }
         }catch (Exception e){
             e.printStackTrace();

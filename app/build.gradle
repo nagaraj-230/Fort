@@ -1,6 +1,25 @@
 apply plugin: 'com.android.application'
 apply plugin: 'com.google.firebase.crashlytics'
 
+def getBuildVersionTag(String flavorName) {
+    def versionPropsFile = rootProject.file('version.properties')
+    Properties versionProps = new Properties()
+    if (versionPropsFile.exists()) {
+        versionPropsFile.withInputStream { stream ->
+            versionProps.load(stream)
+        }
+    }
+    if (flavorName != null && flavorName.toLowerCase().contains("staging")) {
+        def num = project.hasProperty('stagingVersion') ? project.property('stagingVersion') : 
+                  (versionProps.getProperty('STAGING_BUILD_NUMBER') ?: versionProps.getProperty('STAGING_VERSION') ?: '1')
+        return "S" + num.toString().trim()
+    } else {
+        def num = project.hasProperty('prodVersion') ? project.property('prodVersion') : 
+                  (versionProps.getProperty('PROD_BUILD_NUMBER') ?: versionProps.getProperty('PRODUCTION_BUILD_NUMBER') ?: versionProps.getProperty('PROD_VERSION') ?: '1')
+        return "P" + num.toString().trim()
+    }
+}
+
 android {
 
     compileSdk 36
@@ -96,6 +115,7 @@ android {
             buildConfigField("String", "PLAYSTORE_URL", "\"\"")
             buildConfigField("String", "MANUFACTURER_CODE", "\"FORT_\"")
             buildConfigField("String", "BUILD_VARIANT", "\"P\"")
+            buildConfigField("String", "BUILD_VERSION_TAG", "\"${getBuildVersionTag('fortProd')}\"")
             resValue "string", "app_name", "FORT"
         }
 
@@ -116,7 +136,17 @@ android {
             buildConfigField("String", "PLAYSTORE_URL", "\"\"")
             buildConfigField("String", "MANUFACTURER_CODE", "\"FORT_\"")
             buildConfigField("String", "BUILD_VARIANT", "\"S\"")
+            buildConfigField("String", "BUILD_VERSION_TAG", "\"${getBuildVersionTag('fortStaging')}\"")
             resValue "string", "app_name", "FORT Staging"
+        }
+    }
+
+    applicationVariants.all { variant ->
+        variant.outputs.all { output ->
+            def flavor = variant.flavorName
+            def buildType = variant.buildType.name
+            def versionTag = getBuildVersionTag(flavor)
+            output.outputFileName = "app-${flavor}-${buildType}-${versionTag}.apk"
         }
     }
 
@@ -176,3 +206,37 @@ dependencies {
 }
 
 apply plugin: 'com.google.gms.google-services'
+
+tasks.register('bumpStagingVersion') {
+    description = "Increments STAGING_BUILD_NUMBER in version.properties"
+    doLast {
+        def versionPropsFile = rootProject.file('version.properties')
+        Properties versionProps = new Properties()
+        if (versionPropsFile.exists()) {
+            versionPropsFile.withInputStream { stream -> versionProps.load(stream) }
+        }
+        int current = (versionProps.getProperty('STAGING_BUILD_NUMBER') ?: '1') as int
+        versionProps.setProperty('STAGING_BUILD_NUMBER', (current + 1).toString())
+        versionPropsFile.withOutputStream { stream ->
+            versionProps.store(stream, "Build Version Counters for Testing Builds")
+        }
+        println "Updated STAGING_BUILD_NUMBER to ${current + 1} (S${current + 1})"
+    }
+}
+
+tasks.register('bumpProdVersion') {
+    description = "Increments PROD_BUILD_NUMBER in version.properties"
+    doLast {
+        def versionPropsFile = rootProject.file('version.properties')
+        Properties versionProps = new Properties()
+        if (versionPropsFile.exists()) {
+            versionPropsFile.withInputStream { stream -> versionProps.load(stream) }
+        }
+        int current = (versionProps.getProperty('PROD_BUILD_NUMBER') ?: '1') as int
+        versionProps.setProperty('PROD_BUILD_NUMBER', (current + 1).toString())
+        versionPropsFile.withOutputStream { stream ->
+            versionProps.store(stream, "Build Version Counters for Testing Builds")
+        }
+        println "Updated PROD_BUILD_NUMBER to ${current + 1} (P${current + 1})"
+    }
+}
